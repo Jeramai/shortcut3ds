@@ -7,6 +7,9 @@ OUT ?= stub.elf
 $(OUT): source/main.c
 	$(CC) $(CFLAGS) $< -specs=3dsx.specs $(ARCH) -L$(CTRULIB)/lib -lctru -o $@
 
+stub.3dsx: $(OUT)
+	3dsxtool $< $@
+
 .PHONY: clean
 clean:
-	rm -f $(OUT)
+	rm -f $(OUT) stub.3dsx

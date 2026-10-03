@@ -73,6 +73,24 @@ This needs an mGBA **development build** for 3DS (from
 `SD:/3ds`. mGBA 0.10.x releases do not read a ROM path at startup. Use `--emulator` when the
 `.3dsx` is not named `mgba*.3dsx`.
 
+### Native mode
+
+By default a shortcut is a small forwarder. The app runs inside the Homebrew Launcher Loader
+title, so the HOME Menu shows that title while the app loads and when you close it.
+
+With `--native`, the app goes inside the CIA and opens as its own title:
+
+```sh
+shortcut3ds make /Volumes/3DS/3ds/myapp/myapp.3dsx --native --install
+shortcut3ds gba "/Volumes/3DS/roms/gba/Pokemon Emerald.gba" --native --install
+```
+
+- The CIA holds a copy of the app, so make it again after the app updates.
+- The app gets no `argv`. Apps that find their files from `argv[0]` do not work this way.
+- A native GBA shortcut holds mGBA and the ROM. mGBA keeps its saves in `SD:/mGBA/forwarders`,
+  not next to the ROM.
+- On a New 3DS, native apps get the 124 MB memory mode and the 804 MHz CPU.
+
 ### Remove a shortcut
 
 To remove a shortcut, delete it in **System Settings > Data Management**. The app on the SD card

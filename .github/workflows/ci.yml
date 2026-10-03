@@ -10,20 +10,27 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v7
-      - run: make -C stub
+      - run: make -C stub stub.elf stub.3dsx
       - uses: actions/upload-artifact@v7
         with:
           name: stub
-          path: stub/stub.elf
+          path: |
+            stub/stub.elf
+            stub/stub.3dsx
 
   python:
+    needs: stub
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: stub
+          path: stub
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e '.[dev]'
       - run: ruff check src tests
       - run: ruff format --check src tests
-      - run: pytest -q
+      - run: pytest -q -rs

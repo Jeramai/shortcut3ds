@@ -10,3 +10,4 @@ __pycache__/
 .DS_Store
 stub/stub.elf
 src/shortcut3ds/data/stub.elf
+stub/stub.3dsx
