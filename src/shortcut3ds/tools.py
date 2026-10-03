@@ -3,6 +3,8 @@ import shutil
 from importlib import resources
 from pathlib import Path
 
+from shortcut3ds import setup
+
 REPO_TOOLS = Path(__file__).resolve().parents[2] / ".tools"
 
 
@@ -17,10 +19,10 @@ def find(name: str) -> Path:
     found = shutil.which(name)
     if found:
         return Path(found)
-    local = REPO_TOOLS / name
-    if local.is_file():
-        return local
-    raise ToolError(f"{name} not found. Put it on PATH or set SHORTCUT3DS_{name.upper()}.")
+    for folder in (setup.tools_dir(), REPO_TOOLS):
+        if (folder / name).is_file():
+            return folder / name
+    raise ToolError(f"{name} not found. Run `shortcut3ds setup`, or put it on PATH.")
 
 
 def stub_elf() -> Path:

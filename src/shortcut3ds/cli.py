@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from shortcut3ds import __version__, cia, gba, smdh, threedsx, tools
+from shortcut3ds import __version__, cia, gba, setup, smdh, threedsx, tools
 
 DEFAULT_ICON_COLOUR = (70, 90, 160)
 
@@ -119,6 +119,12 @@ def cmd_gba(a: argparse.Namespace) -> int:
     return build_and_report(shortcut, a.output, root, a.install)
 
 
+def cmd_setup(a: argparse.Namespace) -> int:
+    folder = setup.run(force=a.force)
+    print(f"Tools are in {folder}.")
+    return 0
+
+
 def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--sd", type=Path, help="SD card root (found from the file path when possible)")
     p.add_argument("--title", help="name on the HOME Menu")
@@ -149,9 +155,13 @@ def main(argv: list[str] | None = None) -> int:
     _common(g)
     g.set_defaults(func=cmd_gba)
 
+    s = sub.add_parser("setup", help="download makerom and bannertool for this computer")
+    s.add_argument("--force", action="store_true", help="download again even when present")
+    s.set_defaults(func=cmd_setup)
+
     a = p.parse_args(argv)
     try:
         return a.func(a)
-    except (tools.ToolError, threedsx.ThreeDsxError, ValueError, OSError) as e:
+    except (tools.ToolError, setup.SetupError, threedsx.ThreeDsxError, ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
