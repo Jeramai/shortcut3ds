@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   stub:
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
     steps:
