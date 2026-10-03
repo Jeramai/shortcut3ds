@@ -59,10 +59,13 @@ def build_and_report(shortcut: cia.Shortcut, output: str | None, root: Path | No
     cia.build(shortcut, out)
     print(f"Built {out}")
     print(f"  title    {shortcut.title}")
-    print(f"  target   sdmc:{shortcut.target}")
+    if not shortcut.embed:
+        print(f"  target   sdmc:{shortcut.target}")
     if shortcut.deliver:
         deliver = shortcut.deliver.rstrip(b"\0").decode(errors="replace")
         print(f"  deliver  {deliver}")
+    if shortcut.embed:
+        print(f"  native   {shortcut.embed.name} inside the CIA")
     print(f"  title id {shortcut.title_id():016X}")
 
     if install:
@@ -76,11 +79,21 @@ def build_and_report(shortcut: cia.Shortcut, output: str | None, root: Path | No
     return 0
 
 
+def locate(file: Path, a: argparse.Namespace) -> tuple[str, Path | None]:
+    if a.target:
+        return a.target, a.sd
+    if a.native and (a.sd or sd_root_of(file)) is None:
+        return "/" + file.name, None
+    return sd_target(file, a.sd)
+
+
 def cmd_make(a: argparse.Namespace) -> int:
     app = Path(a.app)
     if not app.is_file():
         raise SystemExit(f"{app} does not exist.")
-    target, root = (a.target, a.sd) if a.target else sd_target(app, a.sd)
+    if a.native and (a.arg or a.deliver_arg):
+        raise SystemExit("--native apps start from the HOME Menu, so they get no --arg or --deliver-arg.")
+    target, root = locate(app, a)
 
     raw = threedsx.read_smdh(app)
     try:
@@ -97,8 +110,25 @@ def cmd_make(a: argparse.Namespace) -> int:
         args=tuple(a.arg),
         deliver=(a.deliver_arg.encode() + b"\0") if a.deliver_arg else b"",
         unique_id=parse_unique_id(a.unique_id),
+        embed=app if a.native else None,
     )
     return build_and_report(shortcut, a.output, root, a.install)
+
+
+def resolve_emulator(a: argparse.Namespace, root: Path | None) -> Path:
+    if a.emulator:
+        local = Path(a.emulator)
+        if local.is_file():
+            return local
+        if root and (root / a.emulator.lstrip("/")).is_file():
+            return root / a.emulator.lstrip("/")
+        raise SystemExit(f"Cannot find the emulator {a.emulator}.")
+    found = gba.find_emulator(root) if root else None
+    if found is None:
+        raise SystemExit(
+            "No mGBA .3dsx found under SD:/3ds. Install an mGBA development build, or pass --emulator."
+        )
+    return found
 
 
 def cmd_gba(a: argparse.Namespace) -> int:
@@ -107,28 +137,30 @@ def cmd_gba(a: argparse.Namespace) -> int:
         raise SystemExit(f"{rom} does not exist.")
     if not gba.is_gba_rom(rom):
         raise SystemExit(f"{rom} is not a GBA ROM.")
-    rom_target, root = (a.target, a.sd) if a.target else sd_target(rom, a.sd)
-
-    if a.emulator:
-        emulator = a.emulator
-    else:
-        found = gba.find_emulator(root) if root else None
-        if found is None:
-            raise SystemExit(
-                "No mGBA .3dsx found under SD:/3ds. Install an mGBA development build, or pass --emulator."
-            )
-        emulator = "/" + found.resolve().relative_to(root.resolve()).as_posix()
-
+    rom_target, root = locate(rom, a)
     title = a.title or gba.title_from_name(rom)
     shortcut = cia.Shortcut(
-        target=emulator,
+        target=rom_target,
         title=title,
         publisher=a.publisher or "Game Boy Advance",
         icon=load_icon(a.icon) or gba.default_icon(title),
-        deliver=rom_target.encode() + b"\0",
         unique_id=parse_unique_id(a.unique_id),
         id_key=rom_target,
     )
+
+    if a.native:
+        shortcut.embed = resolve_emulator(a, root)
+        # mGBA opens romfs:/<the name in romfs:/filename> when that file exists.
+        shortcut.romfs_files = {rom.name: rom, "filename": rom.name.encode()}
+    elif a.emulator and root is None:
+        shortcut.target = a.emulator
+        shortcut.deliver = rom_target.encode() + b"\0"
+    else:
+        if root is None:
+            raise SystemExit("Pass --sd so the shortcut can find mGBA on the card.")
+        found = resolve_emulator(a, root)
+        shortcut.target = "/" + found.resolve().relative_to(root.resolve()).as_posix()
+        shortcut.deliver = rom_target.encode() + b"\0"
     return build_and_report(shortcut, a.output, root, a.install)
 
 
@@ -146,6 +178,11 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--unique-id", help="hex unique id in F8000-FEFFF (default: from the path)")
     p.add_argument("-o", "--output", help="where to write the .cia")
     p.add_argument("--install", action="store_true", help="also copy the .cia to SD:/cia")
+    p.add_argument(
+        "--native",
+        action="store_true",
+        help="put the app inside the CIA so it opens as its own title (rebuild after app updates)",
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

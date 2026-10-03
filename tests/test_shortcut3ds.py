@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from shortcut3ds import cia, cli, gba, setup, smdh, threedsx
+from shortcut3ds import cia, cli, gba, native, setup, smdh, threedsx
 
 ICON = Image.new("RGB", (48, 48))
 
@@ -196,3 +196,49 @@ def test_unique_id_outside_the_homebrew_range_is_rejected(value):
 
 def test_unique_id_inside_the_range_is_accepted():
     assert cli.parse_unique_id("F9C19") == 0xF9C19
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _files(root: Path) -> dict[str, bytes]:
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
+def test_romfs_from_mkromfs3ds_unpacks_to_the_same_tree(tmp_path):
+    count = native.extract_romfs((FIXTURES / "romfs.bin").read_bytes(), tmp_path)
+    assert count == 5
+    assert _files(tmp_path) == _files(FIXTURES / "romfs-src")
+    assert (tmp_path / "empty").is_dir()
+
+
+def _load_segments(elf: bytes) -> list[tuple[int, bytes, int, int]]:
+    (phoff,) = struct.unpack_from("<I", elf, 0x1C)
+    (phnum,) = struct.unpack_from("<H", elf, 0x2C)
+    out = []
+    for i in range(phnum):
+        kind, off, vaddr, _, filesz, memsz, flags, _ = struct.unpack_from("<8I", elf, phoff + i * 32)
+        if kind == 1:
+            out.append((vaddr, elf[off : off + filesz], memsz, flags))
+    return out
+
+
+STUB = Path(__file__).parents[1] / "stub"
+
+
+@pytest.mark.skipif(
+    not (STUB / "stub.3dsx").exists(), reason="needs stub.elf and stub.3dsx from `make -C stub`"
+)
+def test_3dsx_converts_back_to_the_segments_of_its_elf():
+    original = _load_segments((STUB / "stub.elf").read_bytes())
+    converted = _load_segments(native.to_elf(native.load(STUB / "stub.3dsx")))
+    assert converted == original
+
+
+def test_3dsx_without_prm_is_refused(tmp_path):
+    raw = (
+        bytearray(b"3DSX") + struct.pack("<HHIIIIII", 0x20, 8, 0, 0, 0x10, 0, 0, 0) + bytes(24) + bytes(0x10)
+    )
+    (tmp_path / "x.3dsx").write_bytes(bytes(raw))
+    with pytest.raises(threedsx.ThreeDsxError):
+        native.load(tmp_path / "x.3dsx")
