@@ -134,6 +134,12 @@ def test_cli_native_app_off_the_card_keeps_the_sd_root(tmp_path):
     assert cli.locate(app, argparse.Namespace(target=None, sd=sd), NATIVE) == ("/app.3dsx", sd)
 
 
+def test_cli_rejects_an_option_of_another_file_type(tmp_path):
+    rom = make_gba(tmp_path / "game.gba")
+    with pytest.raises(SystemExit, match="--arg is not used"):
+        cli.main(["make", str(rom), "--target", "/roms/game.gba", "--arg", "x"])
+
+
 def test_cli_lists_every_type(capsys):
     assert cli.main(["types"]) == 0
     out = capsys.readouterr().out

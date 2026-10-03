@@ -98,7 +98,8 @@ self.onmessage = async ({ data }) => {
     await handlers[data.type](data);
   } catch (error) {
     const message = String(error.message || error);
-    const pythonError = message.match(/(\w+Error): (.+)\s*$/);
-    post("error", pythonError ? pythonError[2] : message);
+    const last = message.trim().split("\n").pop();
+    const pythonError = last.match(/^[\w.]+: (.+)$/);
+    post("error", pythonError ? pythonError[1] : message);
   }
 };

@@ -78,6 +78,12 @@ def cmd_make(a: argparse.Namespace) -> int:
     mode = NATIVE if a.native else SHORTCUT
     target, root = locate(file, a, mode)
 
+    own = {option.name for option in source.options}
+    for other in sources.SOURCES:
+        for option in other.options:
+            if option.name not in own and getattr(a, option.name, None):
+                raise SystemExit(f"{flag(option.name)} is not used with {source.label} files.")
+
     options: dict[str, object] = {}
     for option in source.options:
         value = getattr(a, option.name, None)
