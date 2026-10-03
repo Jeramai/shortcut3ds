@@ -131,6 +131,7 @@ class Shortcut:
     id_key: str | None = None
     embed: Path | None = None
     romfs_files: dict[str, Path | bytes] = field(default_factory=dict)
+    logo: str = "None"
 
     def resolved_unique_id(self) -> int:
         if self.unique_id is not None:
@@ -180,7 +181,7 @@ def rsf(shortcut: Shortcut, romfs: Path) -> str:
     return f"""BasicInfo:
   Title: "SC{uid:05X}"
   ProductCode: "CTR-H-{uid:05X}"
-  Logo: Homebrew
+  Logo: {shortcut.logo}
 RomFs:
   RootPath: "{romfs}"
 TitleInfo:
