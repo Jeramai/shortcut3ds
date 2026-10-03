@@ -4,8 +4,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from shortcut3ds import cia, gba, smdh, threedsx
-from shortcut3ds.cli import DEFAULT_ICON_COLOUR, load_icon, parse_unique_id, safe_name
+from shortcut3ds import cia, gba
+from shortcut3ds.cli import DEFAULT_ICON_COLOUR, app_info, load_icon, parse_unique_id, safe_name
 
 BASE = Path("/")
 
@@ -15,8 +15,7 @@ def inspect(path: str) -> str:
     with file.open("rb") as f:
         magic = f.read(4)
     if magic == b"3DSX":
-        raw = threedsx.read_smdh(file)
-        info = smdh.parse(raw) if raw else None
+        info = app_info(file)
         icon = info.icon if info else Image.new("RGB", (48, 48), DEFAULT_ICON_COLOUR)
         icon.save(BASE / "work-icon.png")
         return json.dumps(

@@ -1,6 +1,7 @@
 import argparse
 import re
 import shutil
+import struct
 import sys
 from pathlib import Path
 
@@ -45,6 +46,14 @@ def parse_unique_id(value: str | None) -> int | None:
     return uid
 
 
+def app_info(app: Path) -> smdh.Smdh | None:
+    raw = threedsx.read_smdh(app)
+    try:
+        return smdh.parse(raw) if raw else None
+    except ValueError:
+        return None
+
+
 def load_icon(path: str | None) -> Image.Image | None:
     if not path:
         return None
@@ -82,8 +91,9 @@ def build_and_report(shortcut: cia.Shortcut, output: str | None, root: Path | No
 def locate(file: Path, a: argparse.Namespace) -> tuple[str, Path | None]:
     if a.target:
         return a.target, a.sd
-    if a.native and (a.sd or sd_root_of(file)) is None:
-        return "/" + file.name, None
+    root = a.sd or sd_root_of(file)
+    if a.native and (root is None or not file.resolve().is_relative_to(root.resolve())):
+        return "/" + file.name, root
     return sd_target(file, a.sd)
 
 
@@ -95,11 +105,7 @@ def cmd_make(a: argparse.Namespace) -> int:
         raise SystemExit("--native apps start from the HOME Menu, so they get no --arg or --deliver-arg.")
     target, root = locate(app, a)
 
-    raw = threedsx.read_smdh(app)
-    try:
-        info = smdh.parse(raw) if raw else None
-    except ValueError:
-        info = None
+    info = app_info(app)
     title = a.title or (info and info.short_title) or app.stem
     icon = load_icon(a.icon) or (info and info.icon) or Image.new("RGB", (48, 48), DEFAULT_ICON_COLOUR)
     shortcut = cia.Shortcut(
@@ -212,6 +218,13 @@ def main(argv: list[str] | None = None) -> int:
     a = p.parse_args(argv)
     try:
         return a.func(a)
-    except (tools.ToolError, setup.SetupError, threedsx.ThreeDsxError, ValueError, OSError) as e:
+    except (
+        tools.ToolError,
+        setup.SetupError,
+        threedsx.ThreeDsxError,
+        ValueError,
+        OSError,
+        struct.error,
+    ) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

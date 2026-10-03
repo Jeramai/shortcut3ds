@@ -213,6 +213,40 @@ def test_romfs_from_mkromfs3ds_unpacks_to_the_same_tree(tmp_path):
     assert (tmp_path / "empty").is_dir()
 
 
+def _romfs_with_one_file(name: str) -> bytes:
+    encoded = name.encode("utf-16-le")
+    dir_table = 0x28
+    file_table = dir_table + 0x18
+    file_data = file_table + 0x20 + len(encoded)
+    header = struct.pack("<10I", 0x28, 0, 0, dir_table, 0x18, 0, 0, file_table, 0, file_data)
+    root = struct.pack("<6I", 0, native.EMPTY, native.EMPTY, 0, native.EMPTY, 0)
+    entry = struct.pack("<IIQQII", 0, native.EMPTY, 0, 1, native.EMPTY, len(encoded)) + encoded
+    return header + root + entry + b"x"
+
+
+@pytest.mark.parametrize("name", ["..", "../escape.txt", "/abs.txt"])
+def test_romfs_names_cannot_leave_the_destination(tmp_path, name):
+    dest = tmp_path / "romfs"
+    with pytest.raises(threedsx.ThreeDsxError):
+        native.extract_romfs(_romfs_with_one_file(name), dest)
+    assert not (tmp_path / "escape.txt").exists()
+
+
+def test_romfs_with_a_plain_name_extracts(tmp_path):
+    assert native.extract_romfs(_romfs_with_one_file("ok.txt"), tmp_path) == 1
+    assert (tmp_path / "ok.txt").read_bytes() == b"x"
+
+
+def test_native_app_off_the_card_keeps_the_sd_root(tmp_path):
+    sd = tmp_path / "sd"
+    sd.mkdir()
+    app = tmp_path / "downloads" / "app.3dsx"
+    app.parent.mkdir()
+    app.touch()
+    args = cli.argparse.Namespace(target=None, sd=sd, native=True)
+    assert cli.locate(app, args) == ("/app.3dsx", sd)
+
+
 def _load_segments(elf: bytes) -> list[tuple[int, bytes, int, int]]:
     (phoff,) = struct.unpack_from("<I", elf, 0x1C)
     (phnum,) = struct.unpack_from("<H", elf, 0x2C)

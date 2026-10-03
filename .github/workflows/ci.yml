@@ -27,6 +27,7 @@ jobs:
         with:
           name: stub
           path: stub
+      - run: mkdir -p src/shortcut3ds/data && cp stub/stub.elf src/shortcut3ds/data/
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
