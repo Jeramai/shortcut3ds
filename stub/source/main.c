@@ -84,14 +84,19 @@ static Result hbldrCall(Handle h, u32 cmd, const void *buf, u32 size, u32 bufId)
 	return R_SUCCEEDED(rc) ? (Result)cmdbuf[1] : rc;
 }
 
-static bool hbTitleInstalled(void)
+static bool hbTitleMedia(FS_MediaType *media)
 {
+	*media = MEDIATYPE_SD;
 	if (R_FAILED(amInit()))
 		return true;
 	u64 id = HB_TITLE_ID;
 	AM_TitleEntry entry;
-	bool found = R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_SD, 1, &id, &entry))
-		|| R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_NAND, 1, &id, &entry));
+	bool found = R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_SD, 1, &id, &entry));
+	if (!found && R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_NAND, 1, &id, &entry)))
+	{
+		*media = MEDIATYPE_NAND;
+		found = true;
+	}
 	amExit();
 	return found;
 }
@@ -116,7 +121,8 @@ int main(void)
 		return 0;
 	}
 
-	if (!hbTitleInstalled())
+	FS_MediaType hbMedia;
+	if (!hbTitleMedia(&hbMedia))
 	{
 		fail("%s", "The Homebrew Launcher Loader title\n(000400000D921E00) is not installed.\n\n"
 			"Install hblauncher_loader.cia with FBI,\nthen open this shortcut again.");
@@ -146,6 +152,6 @@ int main(void)
 
 	if (deliverSize)
 		aptSetChainloaderArgs(deliver, deliverSize, NULL);
-	aptSetChainloader(HB_TITLE_ID, MEDIATYPE_SD);
+	aptSetChainloader(HB_TITLE_ID, hbMedia);
 	return 0;
 }

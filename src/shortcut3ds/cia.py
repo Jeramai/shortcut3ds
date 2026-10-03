@@ -11,6 +11,7 @@ from shortcut3ds import banner, tools
 UNIQUE_ID_FIRST = 0xF8000
 UNIQUE_ID_COUNT = 0x7000
 DELIVER_ARG_MAX = 0x300
+TARGET_BLOB_MAX = 0x400 - 8
 
 SYSCALLS = {
     "ControlMemory": 1,
@@ -102,7 +103,7 @@ class Shortcut:
     def resolved_unique_id(self) -> int:
         if self.unique_id is not None:
             return self.unique_id
-        key = (self.id_key or self.target).lower().encode()
+        key = (self.id_key or "\0".join((self.target, *self.args))).lower().encode() + self.deliver
         return UNIQUE_ID_FIRST + zlib.crc32(key) % UNIQUE_ID_COUNT
 
     def title_id(self) -> int:
@@ -112,7 +113,13 @@ class Shortcut:
 def target_blob(target: str, args: tuple[str, ...]) -> bytes:
     if not target.startswith("/") or "\0" in target:
         raise ValueError("the target must be an absolute SD path such as /3ds/app/app.3dsx")
-    return b"\0".join(s.encode() for s in (target, *args)) + b"\0\0"
+    if any(not a or "\0" in a for a in args):
+        raise ValueError("an app argument cannot be empty or contain a NUL")
+    blob = b"\0".join(s.encode() for s in (target, *args)) + b"\0\0"
+    # The stub's argv buffer is 0x400 bytes: a u32 argc, "sdmc:" and the strings.
+    if len(blob) > TARGET_BLOB_MAX:
+        raise ValueError(f"the target and its arguments are longer than {TARGET_BLOB_MAX} bytes")
+    return blob
 
 
 def rsf(shortcut: Shortcut, romfs: Path) -> str:
