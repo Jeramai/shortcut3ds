@@ -77,6 +77,7 @@ const handlers = {
     const p = await engine();
     for (const [key, file] of Object.entries(files)) {
       if (!file) continue;
+      if (file.url) file.buffer = await (await fetch(file.url)).arrayBuffer();
       const path = writeInput(p.FS, `${key.replace(":", "-")}/${file.name}`, file.buffer);
       if (key.startsWith("option:")) spec.options[key.slice(7)] = { file: path };
       else spec[key] = path;

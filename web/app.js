@@ -42,7 +42,7 @@ function renderOptions() {
       optionInputs.set(
         key,
         need === "file"
-          ? element("input", { type: "file", id, accept: option.accept || undefined, required: true })
+          ? element("input", { type: "file", id, accept: option.accept || undefined, required: !option.bundled })
           : element("input", {
               id,
               value: option.sd_default,
@@ -53,11 +53,17 @@ function renderOptions() {
     }
     const input = optionInputs.get(key);
     const label = element("label", { for: id }, need === "sd_path" ? `Where ${option.label} is on the SD card` : option.label, input);
-    if (option.help || option.link) {
-      const help = element("span", { class: "muted" }, option.help + " ");
+    const help = element("span", { class: "muted" });
+    if (option.bundled && need === "file") {
+      help.append(`Leave empty to use the included ${option.bundled}, or choose your own. `);
+    } else if (option.bundled && need === "sd_path") {
+      const download = element("a", { href: `tools/${option.bundled}`, download: option.bundled }, `Download ${option.bundled}`);
+      help.append("Not on your card yet? ", download, " and copy it there.");
+    } else {
+      if (option.help) help.append(option.help + " ");
       if (option.link) help.append(element("a", { href: option.link }, "Download"));
-      label.append(help);
     }
+    if (help.childNodes.length) label.append(help);
     box.append(label);
   }
   $("notes").textContent = source.notes.join(" ");
@@ -143,7 +149,10 @@ $("form").addEventListener("submit", async (e) => {
     const need = option.needs[spec.mode];
     const input = $(`option-${option.name}`);
     if (!input) continue;
-    if (need === "file") files[`option:${option.name}`] = await readInput(input);
+    if (need === "file") {
+      files[`option:${option.name}`] =
+        (await readInput(input)) || (option.bundled && { name: option.bundled, url: `tools/${option.bundled}` });
+    }
     else if (need === "sd_path") spec.options[option.name] = { sd_path: input.value };
     else spec.options[option.name] = input.value;
   }

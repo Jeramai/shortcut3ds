@@ -65,10 +65,11 @@ class Gba(Source):
             "emulator",
             "mGBA .3dsx",
             {NATIVE: FILE, SHORTCUT: SD_PATH},
-            help="An mGBA development build; 0.10.x releases cannot open a ROM at startup.",
+            help="A development build; 0.10.x releases cannot open a ROM at startup.",
             sd_default="/3ds/mgba/mgba.3dsx",
             accept=".3dsx",
             link="https://mgba.io/downloads.html#development-downloads",
+            bundled="mgba.3dsx",
         ),
     )
     notes = ("mGBA names the save after the ROM file. Keep the same file name to keep your save.",)

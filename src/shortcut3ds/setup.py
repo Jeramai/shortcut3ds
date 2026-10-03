@@ -11,6 +11,7 @@ from pathlib import Path
 
 MAKEROM_URL = "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-{}.zip"
 BANNERTOOL_URL = "https://github.com/Jeramai/shortcut3ds/releases/download/tools-1/bannertool-{}.zip"
+MGBA_URL = "https://github.com/Jeramai/shortcut3ds/releases/download/mgba-9146/mgba-3ds-9146.zip"
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,12 @@ class Download:
     sha256: str
     member: str
 
+
+COMMON: dict[str, Download] = {
+    "mgba.3dsx": Download(
+        MGBA_URL, "6a76bfc7c47d14471b0b1bd055faf9985ba22c56bc391503f9fd776deca66bbe", "mgba.3dsx"
+    ),
+}
 
 DOWNLOADS: dict[str, dict[str, Download]] = {
     "macos_arm64": {
@@ -99,10 +106,10 @@ def fetch(download: Download, dest: Path) -> None:
 
 def run(force: bool = False) -> Path:
     plat = current_platform()
-    wanted = DOWNLOADS.get(plat, {})
+    wanted = {**DOWNLOADS.get(plat, {}), **COMMON}
     target = tools_dir()
     target.mkdir(parents=True, exist_ok=True)
-    for name in ("makerom", "bannertool"):
+    for name in ("makerom", "bannertool", *COMMON):
         dest = target / name
         if dest.exists() and not force:
             print(f"{name}: already in {target}")

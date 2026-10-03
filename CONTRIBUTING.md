@@ -77,6 +77,12 @@ class Nes(Source):
 | `TEXT` | Optional free text | `--name TEXT` | text field |
 | `LIST` | Repeatable text | `--name A --name B` | not shown |
 
+Set `bundled="name.3dsx"` when the project ships a tested copy of the app (like mGBA). Then the
+website and the CLI use that copy when the user chooses none, and `--install` copies it to
+`sd_default` for shortcuts. Shipping a copy also needs a release asset, an entry in
+`setup.COMMON`, a line in `scripts/build_web.sh` and an entry in `NOTICE.md` with its licence and
+source.
+
 Leave a mode out of `needs` when the option does not apply to it. `sources.build()` checks that the
 required options are present before it calls `shortcut()`, so `shortcut()` can rely on them. A
 `FILE` or `SD_PATH` option arrives as an `AppRef` with `.file` and `.sd_path`.
