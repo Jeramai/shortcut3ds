@@ -204,7 +204,9 @@ def main(argv: list[str] | None = None) -> int:
                 flag(option.name),
                 dest=option.name,
                 action="append" if repeat else "store",
-                help=f"{source.name}: {option.label}",
+                help=f"{source.name}: your own {option.label} (default: the included one)"
+                if option.bundled
+                else f"{source.name}: {option.label}",
             )
     m.set_defaults(func=cmd_make)
 
