@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from shortcut3ds import cia, cli, gba, native, setup, smdh, threedsx
+from shortcut3ds import cia, cli, gba, logo, native, setup, smdh, threedsx, tools
 
 ICON = Image.new("RGB", (48, 48))
 
@@ -242,3 +242,18 @@ def test_3dsx_without_prm_is_refused(tmp_path):
     (tmp_path / "x.3dsx").write_bytes(bytes(raw))
     with pytest.raises(threedsx.ThreeDsxError):
         native.load(tmp_path / "x.3dsx")
+
+
+def test_black_logo_has_every_material_black_and_fits_its_slot():
+    raw = tools.black_logo().read_bytes()
+    assert len(raw) == 0x2000
+    darc = logo.lz11_decompress(raw)
+    colours = logo.material_colours(darc)
+    assert len(colours) == 9
+    assert all(black[:3] == b"\0\0\0" and white[:3] == b"\0\0\0" for _, black, white in colours)
+    assert {"logo.bclim", "NintendoLogo_U_00.bclyt", "NintendoLogo_D_00.bclyt"} <= set(logo.darc_files(darc))
+
+
+def test_lz11_round_trips():
+    data = bytes(range(256)) * 40 + b"abc" * 3000 + bytes(5000)
+    assert logo.lz11_decompress(logo.lz11_compress(data)) == data

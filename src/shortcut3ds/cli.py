@@ -112,6 +112,8 @@ def cmd_make(a: argparse.Namespace) -> int:
         unique_id=parse_unique_id(a.unique_id),
         embed=app if a.native else None,
     )
+    if a.logo == "black":
+        shortcut.logo_file = tools.black_logo()
     return build_and_report(shortcut, a.output, root, a.install)
 
 
@@ -161,6 +163,8 @@ def cmd_gba(a: argparse.Namespace) -> int:
         found = resolve_emulator(a, root)
         shortcut.target = "/" + found.resolve().relative_to(root.resolve()).as_posix()
         shortcut.deliver = rom_target.encode() + b"\0"
+    if a.logo == "black":
+        shortcut.logo_file = tools.black_logo()
     return build_and_report(shortcut, a.output, root, a.install)
 
 
@@ -178,6 +182,12 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--unique-id", help="hex unique id in F8000-FEFFF (default: from the path)")
     p.add_argument("-o", "--output", help="where to write the .cia")
     p.add_argument("--install", action="store_true", help="also copy the .cia to SD:/cia")
+    p.add_argument(
+        "--logo",
+        choices=["homebrew", "black"],
+        default="homebrew",
+        help="screen shown while the app loads: the homebrew logo, or plain black",
+    )
     p.add_argument(
         "--native",
         action="store_true",

@@ -21,7 +21,7 @@ dev = ["pytest", "ruff"]
 version = { attr = "shortcut3ds.__version__" }
 
 [tool.setuptools.package-data]
-shortcut3ds = ["data/stub.elf"]
+shortcut3ds = ["data/stub.elf", "data/logo-black.bin"]
 
 [tool.ruff]
 line-length = 110
