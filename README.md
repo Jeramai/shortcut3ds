@@ -18,12 +18,19 @@ On the console:
   Luma replaces its code with the requested `.3dsx`, so the old version is fine.
 - FBI, to install the shortcut.
 
-On the computer:
+On the computer: Python 3.10+ on macOS or Linux.
 
-- Python 3.10+.
-- [`makerom`](https://github.com/3DSGuy/Project_CTR/releases) and
-  [`bannertool`](https://github.com/carstene1ns/3ds-bannertool) on `PATH`, or in `SHORTCUT3DS_MAKEROM`
-  and `SHORTCUT3DS_BANNERTOOL`.
+## Install
+
+```sh
+pipx install https://github.com/Jeramai/shortcut3ds/releases/latest/download/shortcut3ds-py3-none-any.whl
+shortcut3ds setup
+```
+
+`setup` downloads [`makerom`](https://github.com/3DSGuy/Project_CTR) and
+[`bannertool`](https://github.com/carstene1ns/3ds-bannertool) to `~/.local/share/shortcut3ds/bin`
+and checks their SHA-256. A copy on `PATH` wins, and so do `SHORTCUT3DS_MAKEROM` and
+`SHORTCUT3DS_BANNERTOOL`.
 
 ## Use
 
