@@ -36,6 +36,15 @@ def safe_name(title: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", title).strip("-") or "shortcut"
 
 
+def parse_unique_id(value: str | None) -> int | None:
+    if not value:
+        return None
+    uid = int(value, 16)
+    if not cia.UNIQUE_ID_FIRST <= uid < cia.UNIQUE_ID_FIRST + cia.UNIQUE_ID_COUNT:
+        raise ValueError(f"--unique-id {value} is outside the homebrew range F8000-FEFFF")
+    return uid
+
+
 def load_icon(path: str | None) -> Image.Image | None:
     if not path:
         return None
@@ -61,7 +70,8 @@ def build_and_report(shortcut: cia.Shortcut, output: str | None, root: Path | No
             raise SystemExit("--install needs the SD card. Pass --sd.")
         dest = root / "cia" / out.name
         dest.parent.mkdir(exist_ok=True)
-        shutil.copyfile(out, dest)
+        if dest.resolve() != out.resolve():
+            shutil.copyfile(out, dest)
         print(f"Copied to {dest}. Install it with FBI: SD > cia > {out.name}.")
     return 0
 
@@ -73,7 +83,10 @@ def cmd_make(a: argparse.Namespace) -> int:
     target, root = (a.target, a.sd) if a.target else sd_target(app, a.sd)
 
     raw = threedsx.read_smdh(app)
-    info = smdh.parse(raw) if raw else None
+    try:
+        info = smdh.parse(raw) if raw else None
+    except ValueError:
+        info = None
     title = a.title or (info and info.short_title) or app.stem
     icon = load_icon(a.icon) or (info and info.icon) or Image.new("RGB", (48, 48), DEFAULT_ICON_COLOUR)
     shortcut = cia.Shortcut(
@@ -83,7 +96,7 @@ def cmd_make(a: argparse.Namespace) -> int:
         icon=icon,
         args=tuple(a.arg),
         deliver=(a.deliver_arg.encode() + b"\0") if a.deliver_arg else b"",
-        unique_id=int(a.unique_id, 16) if a.unique_id else None,
+        unique_id=parse_unique_id(a.unique_id),
     )
     return build_and_report(shortcut, a.output, root, a.install)
 
@@ -113,7 +126,7 @@ def cmd_gba(a: argparse.Namespace) -> int:
         publisher=a.publisher or "Game Boy Advance",
         icon=load_icon(a.icon) or gba.default_icon(title),
         deliver=rom_target.encode() + b"\0",
-        unique_id=int(a.unique_id, 16) if a.unique_id else None,
+        unique_id=parse_unique_id(a.unique_id),
         id_key=rom_target,
     )
     return build_and_report(shortcut, a.output, root, a.install)

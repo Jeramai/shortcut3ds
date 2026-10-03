@@ -166,3 +166,32 @@ def test_setup_rejects_a_download_with_the_wrong_hash(tmp_path, monkeypatch):
     setup.fetch(setup.Download("https://x/y.zip", good, "makerom"), tmp_path / "makerom")
     assert (tmp_path / "makerom").read_bytes() == b"binary"
     assert os.access(tmp_path / "makerom", os.X_OK)
+
+
+def test_target_blob_rejects_args_the_stub_cannot_hold():
+    with pytest.raises(ValueError):
+        cia.target_blob("/3ds/a.3dsx", ("x" * cia.TARGET_BLOB_MAX,))
+
+
+@pytest.mark.parametrize("arg", ["", "a\0b"])
+def test_target_blob_rejects_empty_or_nul_args(arg):
+    with pytest.raises(ValueError):
+        cia.target_blob("/3ds/a.3dsx", (arg,))
+
+
+def test_shortcuts_to_one_app_with_different_args_get_different_ids():
+    plain = cia.Shortcut("/3ds/a.3dsx", "t", "", ICON)
+    with_arg = cia.Shortcut("/3ds/a.3dsx", "t", "", ICON, args=("--fast",))
+    with_deliver = cia.Shortcut("/3ds/a.3dsx", "t", "", ICON, deliver=b"/roms/x.gba\0")
+    ids = {s.resolved_unique_id() for s in (plain, with_arg, with_deliver)}
+    assert len(ids) == 3
+
+
+@pytest.mark.parametrize("value", ["1000", "F7FFF", "FF000", "100000"])
+def test_unique_id_outside_the_homebrew_range_is_rejected(value):
+    with pytest.raises(ValueError):
+        cli.parse_unique_id(value)
+
+
+def test_unique_id_inside_the_range_is_accepted():
+    assert cli.parse_unique_id("F9C19") == 0xF9C19
