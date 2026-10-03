@@ -12,3 +12,11 @@ stub/stub.elf
 src/shortcut3ds/data/stub.elf
 stub/stub.3dsx
 site/
+*.nds
+*.gb
+*.gbc
+*.nes
+*.sfc
+*.smc
+*.sav
+*.ss[0-9]

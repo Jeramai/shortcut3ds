@@ -1,0 +1,40 @@
+name: Bug report
+description: Something does not work on the website, the command line or the console
+labels: [bug]
+body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Website, Command line, On the console]
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [Native, Shortcut, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File type and app
+      placeholder: ".3dsx of <app name and version>, or a GBA ROM with mGBA <build>"
+    validations:
+      required: true
+  - type: input
+    id: console
+    attributes:
+      label: Console and Luma3DS version
+      placeholder: "New 3DS XL, Luma3DS v13.3"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The error text, or what you saw on the console. For a crash, attach the newest file from SD:/luma/dumps/arm11/.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: Do not attach ROMs, apps or CIAs.

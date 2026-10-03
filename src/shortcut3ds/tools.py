@@ -5,8 +5,6 @@ from pathlib import Path
 
 from shortcut3ds import setup
 
-REPO_TOOLS = Path(__file__).resolve().parents[2] / ".tools"
-
 
 class ToolError(Exception):
     pass
@@ -19,9 +17,8 @@ def find(name: str) -> Path:
     found = shutil.which(name)
     if found:
         return Path(found)
-    for folder in (setup.tools_dir(), REPO_TOOLS):
-        if (folder / name).is_file():
-            return folder / name
+    if (setup.tools_dir() / name).is_file():
+        return setup.tools_dir() / name
     raise ToolError(f"{name} not found. Run `shortcut3ds setup`, or put it on PATH.")
 
 

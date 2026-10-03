@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Assembles the static site in site/. Needs Docker, git and python with `build`.
+# Assembles the static site in site/. Needs Docker, git, and python with `build` and Pillow.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -44,4 +44,5 @@ hash=$(shasum -a 256 "build/dist/$wheel" | cut -c1-12)
 mkdir -p "site/py/$hash"
 cp "build/dist/$wheel" "site/py/$hash/"
 printf '{"wheel": "py/%s/%s"}\n' "$hash" "$wheel" > site/manifest.json
+PYTHONPATH=src python3 -c "from shortcut3ds import web; print(web.describe())" > site/sources.json
 echo "site/ is ready ($wheel)"

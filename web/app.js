@@ -8,21 +8,53 @@ const steps = [
   "Packing the CIA",
 ];
 
+let catalogue = [];
 let picked = null;
 let pending = null;
-let kind = null;
+let source = null;
 let downloadUrl = null;
 
 function mode() {
   return document.querySelector("input[name=mode]:checked").value;
 }
 
-function refresh() {
-  for (const el of document.querySelectorAll("[data-show]")) {
-    const need = el.dataset.show.split(" ");
-    el.hidden = !need.every((word) => word === kind || word === mode());
-    for (const input of el.querySelectorAll("input")) input.disabled = el.hidden;
+function element(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value !== undefined && value !== false) el.setAttribute(key, value === true ? "" : value);
   }
+  el.append(...children);
+  return el;
+}
+
+function renderOptions() {
+  const box = $("options");
+  box.replaceChildren();
+  $("target-field").hidden = mode() !== "shortcut";
+  $("target").disabled = $("target-field").hidden;
+  for (const option of source.options) {
+    const need = option.needs[mode()];
+    if (!need || need === "list") continue;
+    const id = `option-${option.name}`;
+    const input =
+      need === "file"
+        ? element("input", { type: "file", id, accept: option.accept || undefined, required: true })
+        : element("input", {
+            id,
+            value: option.sd_default,
+            pattern: need === "sd_path" ? "/.*" : undefined,
+            required: need === "sd_path",
+          });
+    const label = element("label", { for: id }, need === "sd_path" ? `Where ${option.label} is on the SD card` : option.label, input);
+    if (option.help || option.link) {
+      const help = element("span", { class: "muted" }, option.help + " ");
+      if (option.link) help.append(element("a", { href: option.link }, "Download"));
+      label.append(help);
+    }
+    box.append(label);
+  }
+  $("notes").textContent = source.notes.join(" ");
+  $("notes").hidden = source.notes.length === 0;
 }
 
 function showError(message) {
@@ -53,9 +85,24 @@ async function pick(file) {
   worker.postMessage({ type: "inspect", name: file.name, buffer: await file.arrayBuffer() });
 }
 
+async function readInput(input) {
+  const file = input.files[0];
+  return file && { name: file.name, buffer: await file.arrayBuffer() };
+}
+
+fetch("sources.json")
+  .then((response) => response.json())
+  .then((list) => {
+    catalogue = list;
+    const extensions = list.flatMap((s) => s.extensions);
+    $("file").accept = extensions.join(",");
+    $("drop-kinds").textContent = extensions.join(" or ");
+  })
+  .catch(() => showError("The page could not load its file types. Reload to try again."));
+
 $("file").addEventListener("change", (e) => pick(e.target.files[0]));
 $("change").addEventListener("click", () => $("file").click());
-for (const radio of document.querySelectorAll("input[name=mode]")) radio.addEventListener("change", refresh);
+for (const radio of document.querySelectorAll("input[name=mode]")) radio.addEventListener("change", renderOptions);
 
 const drop = $("drop");
 drop.addEventListener("dragover", (e) => {
@@ -69,29 +116,30 @@ drop.addEventListener("drop", (e) => {
   pick(e.dataTransfer.files[0]);
 });
 
-async function input(id) {
-  const file = $(id).files[0];
-  return file && { name: file.name, buffer: await file.arrayBuffer() };
-}
-
 $("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
   $("done").hidden = true;
   const files = { file: { name: picked.name, buffer: await picked.arrayBuffer() } };
-  const icon = await input("icon");
+  const icon = await readInput($("icon"));
   if (icon) files.icon = icon;
   const spec = {
-    kind,
+    source: source.name,
     mode: mode(),
     title: $("title").value,
     publisher: $("publisher").value,
     unique_id: $("unique-id").value || null,
-    target: kind === "3dsx" ? $("target-3dsx").value : $("target-rom").value,
-    emulator_target: $("target-mgba").value,
-    rom_name: picked.name,
+    target: $("target").value,
+    options: {},
   };
-  if (kind === "gba" && spec.mode === "native") files.emulator = await input("emulator");
+  for (const option of source.options) {
+    const need = option.needs[spec.mode];
+    const input = $(`option-${option.name}`);
+    if (!input) continue;
+    if (need === "file") files[`option:${option.name}`] = await readInput(input);
+    else if (need === "sd_path") spec.options[option.name] = { sd_path: input.value };
+    else spec.options[option.name] = input.value;
+  }
   busy(true);
   setStatus(steps[0]);
   worker.postMessage({ type: "build", spec, files });
@@ -108,18 +156,17 @@ worker.onmessage = ({ data }) => {
   } else if (data.type === "inspected") {
     busy(false);
     picked = pending;
-    kind = data.value.kind;
+    source = catalogue.find((s) => s.name === data.value.source);
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;
     $("publisher").value = data.value.publisher;
-    $("target-3dsx").value = `/3ds/${stem}/${picked.name}`;
-    $("target-rom").value = `/roms/gba/${picked.name}`;
+    $("target").value = `${source.sd_folder.replace("{stem}", stem)}/${picked.name}`;
     $("icon-preview").src = URL.createObjectURL(new Blob([data.value.icon], { type: "image/png" }));
     $("picked-name").textContent = picked.name;
-    $("picked-kind").textContent = kind === "3dsx" ? "3DS homebrew app" : "Game Boy Advance ROM, opens in mGBA";
+    $("picked-kind").textContent = source.label;
     $("drop").hidden = true;
     $("form").hidden = false;
-    refresh();
+    renderOptions();
   } else if (data.type === "built") {
     busy(false);
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);

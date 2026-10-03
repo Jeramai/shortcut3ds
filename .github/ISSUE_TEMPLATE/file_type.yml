@@ -1,0 +1,30 @@
+name: New file type
+description: Ask for, or offer to add, support for another kind of file
+labels: [file type]
+body:
+  - type: input
+    id: format
+    attributes:
+      label: File format
+      placeholder: ".nes ROMs"
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: App or emulator that opens it on the 3DS
+      placeholder: "Name, link, and the version that can open a file at startup"
+    validations:
+      required: true
+  - type: textarea
+    id: start
+    attributes:
+      label: How the app is told which file to open
+      description: For example a command line argument, the APT deliver arg, or a file in its RomFS. Link to the source if you know it.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Help
+      options:
+        - label: I want to open a pull request for this (see CONTRIBUTING.md)
+        - label: I can test it on a console
