@@ -1,5 +1,6 @@
 import hashlib
 import io
+import json
 import os
 import struct
 import zipfile
@@ -8,7 +9,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from shortcut3ds import cia, cli, gba, native, setup, smdh, threedsx
+from shortcut3ds import cia, cli, gba, native, setup, smdh, threedsx, web
 
 ICON = Image.new("RGB", (48, 48))
 
@@ -242,3 +243,23 @@ def test_3dsx_without_prm_is_refused(tmp_path):
     (tmp_path / "x.3dsx").write_bytes(bytes(raw))
     with pytest.raises(threedsx.ThreeDsxError):
         native.load(tmp_path / "x.3dsx")
+
+
+def test_web_prepare_matches_the_cli_title_id_for_a_gba_shortcut(tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "BASE", tmp_path)
+    rom = make_gba(tmp_path / "Game (USA).gba")
+    info = json.loads(web.inspect(str(rom)))
+    assert info["kind"] == "gba" and info["title"] == "Game"
+    spec = {
+        "kind": "gba", "mode": "forwarder", "file": str(rom), "title": "Game", "publisher": "",
+        "target": "/roms/gba/Game (USA).gba", "emulator_target": "/3ds/mgba/mgba.3dsx",
+        "rom_name": rom.name, "unique_id": None,
+    }  # fmt: skip
+    plan = json.loads(web.prepare(json.dumps(spec)))
+    expected = cia.Shortcut(
+        "/3ds/mgba/mgba.3dsx", "Game", "", ICON, deliver=b"/roms/gba/Game (USA).gba\0",
+        id_key="/roms/gba/Game (USA).gba",
+    )  # fmt: skip
+    assert plan["title_id"] == f"{expected.title_id():016X}"
+    assert [c[0] for c in plan["commands"]] == ["bannertool", "bannertool", "makerom"]
+    assert (tmp_path / "work" / "romfs" / "deliver").read_bytes() == b"/roms/gba/Game (USA).gba\0"
