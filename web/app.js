@@ -9,6 +9,7 @@ const steps = [
 ];
 
 let catalogue = [];
+const optionInputs = new Map();
 let picked = null;
 let pending = null;
 let source = null;
@@ -36,15 +37,21 @@ function renderOptions() {
     const need = option.needs[mode()];
     if (!need || need === "list") continue;
     const id = `option-${option.name}`;
-    const input =
-      need === "file"
-        ? element("input", { type: "file", id, accept: option.accept || undefined, required: true })
-        : element("input", {
-            id,
-            value: option.sd_default,
-            pattern: need === "sd_path" ? "/.*" : undefined,
-            required: need === "sd_path",
-          });
+    const key = `${source.name}/${option.name}/${need}`;
+    if (!optionInputs.has(key)) {
+      optionInputs.set(
+        key,
+        need === "file"
+          ? element("input", { type: "file", id, accept: option.accept || undefined, required: true })
+          : element("input", {
+              id,
+              value: option.sd_default,
+              pattern: need === "sd_path" ? "/.*" : undefined,
+              required: need === "sd_path",
+            }),
+      );
+    }
+    const input = optionInputs.get(key);
     const label = element("label", { for: id }, need === "sd_path" ? `Where ${option.label} is on the SD card` : option.label, input);
     if (option.help || option.link) {
       const help = element("span", { class: "muted" }, option.help + " ");
@@ -90,7 +97,7 @@ async function readInput(input) {
   return file && { name: file.name, buffer: await file.arrayBuffer() };
 }
 
-fetch("sources.json")
+fetch("sources.json", { cache: "no-store" })
   .then((response) => response.json())
   .then((list) => {
     catalogue = list;
@@ -155,8 +162,13 @@ worker.onmessage = ({ data }) => {
     setStatus(data.value);
   } else if (data.type === "inspected") {
     busy(false);
+    const found = catalogue.find((s) => s.name === data.value.source);
+    if (!found) {
+      showError("The page is out of date. Reload to try again.");
+      return;
+    }
     picked = pending;
-    source = catalogue.find((s) => s.name === data.value.source);
+    source = found;
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;
     $("publisher").value = data.value.publisher;
