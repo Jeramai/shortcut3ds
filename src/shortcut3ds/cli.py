@@ -111,7 +111,6 @@ def cmd_make(a: argparse.Namespace) -> int:
         deliver=(a.deliver_arg.encode() + b"\0") if a.deliver_arg else b"",
         unique_id=parse_unique_id(a.unique_id),
         embed=app if a.native else None,
-        logo=a.logo.capitalize(),
     )
     return build_and_report(shortcut, a.output, root, a.install)
 
@@ -147,7 +146,6 @@ def cmd_gba(a: argparse.Namespace) -> int:
         icon=load_icon(a.icon) or gba.default_icon(title),
         unique_id=parse_unique_id(a.unique_id),
         id_key=rom_target,
-        logo=a.logo.capitalize(),
     )
 
     if a.native:
@@ -180,12 +178,6 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--unique-id", help="hex unique id in F8000-FEFFF (default: from the path)")
     p.add_argument("-o", "--output", help="where to write the .cia")
     p.add_argument("--install", action="store_true", help="also copy the .cia to SD:/cia")
-    p.add_argument(
-        "--logo",
-        choices=["none", "homebrew"],
-        default="none",
-        help="splash on the bottom screen while the app loads (default: none)",
-    )
     p.add_argument(
         "--native",
         action="store_true",
