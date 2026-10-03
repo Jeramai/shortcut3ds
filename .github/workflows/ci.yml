@@ -21,6 +21,9 @@ jobs:
   python:
     needs: stub
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.14"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -30,7 +33,7 @@ jobs:
       - run: mkdir -p src/shortcut3ds/data && cp stub/stub.elf src/shortcut3ds/data/
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
       - run: pip install -e '.[dev]'
       - run: ruff check src tests
       - run: ruff format --check src tests

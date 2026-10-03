@@ -28,8 +28,8 @@ function post(type, value, extra = {}) {
 }
 
 function writeInput(fs, name, buffer) {
-  fs.mkdirTree("/input");
   const path = "/input/" + name;
+  fs.mkdirTree(path.slice(0, path.lastIndexOf("/")));
   fs.writeFile(path, new Uint8Array(buffer));
   return path;
 }
@@ -76,7 +76,10 @@ const handlers = {
   async build({ spec, files }) {
     const p = await engine();
     for (const [key, file] of Object.entries(files)) {
-      spec[key] = writeInput(p.FS, file.name, file.buffer);
+      if (!file) continue;
+      const path = writeInput(p.FS, `${key.replace(":", "-")}/${file.name}`, file.buffer);
+      if (key.startsWith("option:")) spec.options[key.slice(7)] = { file: path };
+      else spec[key] = path;
     }
     post("status", "Preparing the app, icon and banner");
     const plan = JSON.parse(p.globals.get("web").prepare(JSON.stringify(spec)));

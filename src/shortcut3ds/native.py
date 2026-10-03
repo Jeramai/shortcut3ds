@@ -162,12 +162,20 @@ def extract_romfs(raw: bytes, dest: Path) -> int:
     if header_size != 0x28:
         raise ThreeDsxError("the app's RomFS has an unknown layout")
     count = 0
+    seen: set[tuple[str, int]] = set()
+
+    def visit(kind: str, offset: int) -> None:
+        if (kind, offset) in seen:
+            raise ThreeDsxError("the app's RomFS links back to itself")
+        seen.add((kind, offset))
 
     def walk_dir(offset: int, path: Path) -> None:
         nonlocal count
+        visit("dir", offset)
         path.mkdir(parents=True, exist_ok=True)
         _, _, child_dir, child_file, _ = struct.unpack_from("<5I", raw, dir_table + offset)
         while child_file != EMPTY:
+            visit("file", child_file)
             entry = file_table + child_file
             _, sibling, data_off, data_size, _ = struct.unpack_from("<IIQQI", raw, entry)
             name = _name(raw, entry + 0x1C)

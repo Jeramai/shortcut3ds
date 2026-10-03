@@ -50,9 +50,10 @@ Mount the SD card and point at the file on it:
 
 ```sh
 shortcut3ds make /Volumes/3DS/3ds/myapp/myapp.3dsx --native --install
-shortcut3ds gba "/Volumes/3DS/roms/gba/Pokemon Emerald.gba" --native --install
+shortcut3ds make "/Volumes/3DS/roms/gba/Pokemon Emerald.gba" --native --install
 ```
 
+`make` detects the file type; `shortcut3ds types` lists the types and their extra options.
 `--install` copies the `.cia` to `SD:/cia/`. On the console, open FBI, go to **SD > cia**, and
 install it. Leave out `--native` to make a shortcut instead.
 
@@ -62,8 +63,8 @@ install it. Leave out `--native` to make a shortcut instead.
 | `--title`, `--publisher` | Text on the HOME Menu (default: the app's own) |
 | `--icon file.png` | Icon to use instead of the app's own |
 | `--target /3ds/x/y.3dsx` | SD path of the file, when it is not on a mounted card |
-| `--emulator PATH` | mGBA `.3dsx` (default: the first `mgba*.3dsx` under `SD:/3ds`) |
-| `--arg VALUE`, `--deliver-arg TEXT` | Arguments for the app (shortcut mode only) |
+| `--emulator PATH` | GBA: mGBA `.3dsx` (default: the first `mgba*.3dsx` under `SD:/3ds`) |
+| `--arg VALUE`, `--deliver-arg TEXT` | `.3dsx`: arguments for the app (shortcut mode only) |
 | `--unique-id F9C19` | Fixed unique ID in `F8000`–`FEFFF` (default: derived from the path) |
 | `-o file.cia` | Output file |
 
@@ -96,9 +97,15 @@ pipeline.
 | Path | What |
 | :--- | :--- |
 | `src/shortcut3ds/` | The Python package: CLI, CIA pipeline, 3DSX and SMDH readers, banner art |
+| `src/shortcut3ds/sources/` | One class per file type; the CLI and the website read this list |
 | `stub/` | The forwarder app, built with devkitARM and libctru |
 | `web/` | The website; `scripts/build_web.sh` assembles it into `site/` |
 | `tests/` | pytest suite, including a round trip through devkitPro's own `3dsxtool` |
+
+## Contributing
+
+Support for another file type is one class in `src/shortcut3ds/sources/`; see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the guide, the checks, and how to report a console test.
 
 ## Development
 

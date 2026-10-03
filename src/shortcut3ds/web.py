@@ -2,34 +2,23 @@ import json
 import shutil
 from pathlib import Path
 
-from PIL import Image
-
-from shortcut3ds import cia, gba
-from shortcut3ds.cli import DEFAULT_ICON_COLOUR, app_info, load_icon, parse_unique_id, safe_name
+from shortcut3ds import cia, sources
+from shortcut3ds.common import load_icon, parse_unique_id, safe_name
+from shortcut3ds.sources.base import AppRef, Look, Request
 
 BASE = Path("/")
 
 
+def describe() -> str:
+    return json.dumps(sources.describe())
+
+
 def inspect(path: str) -> str:
     file = Path(path)
-    with file.open("rb") as f:
-        magic = f.read(4)
-    if magic == b"3DSX":
-        info = app_info(file)
-        icon = info.icon if info else Image.new("RGB", (48, 48), DEFAULT_ICON_COLOUR)
-        icon.save(BASE / "work-icon.png")
-        return json.dumps(
-            {
-                "kind": "3dsx",
-                "title": (info and info.short_title) or file.stem,
-                "publisher": (info and info.publisher) or "",
-            }
-        )
-    if gba.is_gba_rom(file):
-        title = gba.title_from_name(file)
-        gba.default_icon(title).save(BASE / "work-icon.png")
-        return json.dumps({"kind": "gba", "title": title, "publisher": "Game Boy Advance"})
-    raise ValueError("This is not a .3dsx app or a GBA ROM.")
+    source = sources.detect(file)
+    defaults = source.defaults(file)
+    defaults.icon.save(BASE / "work-icon.png")
+    return json.dumps({"source": source.name, "title": defaults.title, "publisher": defaults.publisher})
 
 
 def prepare(spec_json: str) -> str:
@@ -39,35 +28,28 @@ def prepare(spec_json: str) -> str:
         shutil.rmtree(work)
     work.mkdir()
 
-    source = Path(spec["file"])
-    native = spec["mode"] == "native"
-    title = spec["title"].strip() or source.stem
-    icon = load_icon(spec.get("icon")) or Image.open(BASE / "work-icon.png")
-    shortcut = cia.Shortcut(
-        target=spec["target"],
-        title=title,
+    source = sources.get(spec["source"])
+    file = Path(spec["file"])
+    options = {}
+    for name, value in spec.get("options", {}).items():
+        if isinstance(value, dict):
+            options[name] = AppRef(
+                file=Path(value["file"]) if value.get("file") else None, sd_path=value.get("sd_path")
+            )
+        elif value:
+            options[name] = value
+    look = Look(
+        title=spec["title"].strip() or file.stem,
         publisher=spec["publisher"].strip(),
-        icon=icon,
+        icon=load_icon(spec.get("icon")) or load_icon(str(BASE / "work-icon.png")),
         unique_id=parse_unique_id(spec.get("unique_id")),
     )
-
-    if spec["kind"] == "3dsx":
-        if native:
-            shortcut.embed = source
-    else:
-        shortcut.id_key = spec["target"]
-        if native:
-            shortcut.embed = Path(spec["emulator"])
-            shortcut.romfs_files = {spec["rom_name"]: source, "filename": spec["rom_name"].encode()}
-        else:
-            shortcut.target = spec["emulator_target"]
-            shortcut.deliver = spec["target"].encode() + b"\0"
-
+    shortcut = sources.build(source, Request(file, spec["target"], spec["mode"], options), look)
     commands = cia.prepare(shortcut, work)
     return json.dumps(
         {
             "commands": commands,
-            "filename": f"{safe_name(title)}.cia",
+            "filename": f"{safe_name(look.title)}.cia",
             "title_id": f"{shortcut.title_id():016X}",
         }
     )

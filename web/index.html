@@ -32,7 +32,7 @@
 
       <label class="drop" id="drop">
         <input type="file" id="file" accept=".3dsx,.gba">
-        <span class="drop-title">Choose a <code>.3dsx</code> or <code>.gba</code> file</span>
+        <span class="drop-title">Choose a <code id="drop-kinds">.3dsx or .gba</code> file</span>
         <span class="drop-hint">or drop it here</span>
       </label>
 
@@ -53,7 +53,7 @@
             <span><strong>Native</strong><span class="muted">Opens as its own title. Rebuild after app updates.</span></span>
           </label>
           <label class="mode">
-            <input type="radio" name="mode" value="forwarder">
+            <input type="radio" name="mode" value="shortcut">
             <span><strong>Shortcut</strong><span class="muted">Tiny; starts the app on your SD card via the Homebrew Launcher Loader.</span></span>
           </label>
         </fieldset>
@@ -63,20 +63,11 @@
           <label>Publisher<input id="publisher" maxlength="63"></label>
         </div>
 
-        <label data-show="3dsx forwarder">Where the app is on the SD card
-          <input id="target-3dsx" placeholder="/3ds/app/app.3dsx" pattern="/.*" required>
+        <label id="target-field">Where this file is on the SD card
+          <input id="target" pattern="/.*" required>
         </label>
-        <label data-show="gba forwarder">Where the ROM is on the SD card
-          <input id="target-rom" placeholder="/roms/gba/game.gba" pattern="/.*" required>
-        </label>
-        <label data-show="gba forwarder">Where mGBA is on the SD card
-          <input id="target-mgba" value="/3ds/mgba/mgba.3dsx" pattern="/.*" required>
-        </label>
-        <label data-show="gba native">mGBA <code>.3dsx</code> file
-          <input type="file" id="emulator" accept=".3dsx" required>
-          <span class="muted">Use a <a href="https://mgba.io/downloads.html#development-downloads">development build</a>; it is put inside the CIA together with the ROM.</span>
-        </label>
-        <p class="note" data-show="gba">mGBA names the save after the ROM file. Keep the same file name to keep your save.</p>
+        <div id="options" class="options"></div>
+        <p class="note" id="notes" hidden></p>
 
         <details>
           <summary>More options</summary>
@@ -126,7 +117,7 @@
 
   <footer class="foot">
     <p>MIT licensed. Not affiliated with Nintendo. Only use files you own.</p>
-    <a href="https://github.com/Jeramai/shortcut3ds">Source on GitHub</a>
+    <span><a href="https://github.com/Jeramai/shortcut3ds">Source on GitHub</a> · <a href="https://github.com/Jeramai/shortcut3ds/blob/main/NOTICE.md">Third-party notices</a></span>
   </footer>
 
   <script src="app.js" type="module"></script>
