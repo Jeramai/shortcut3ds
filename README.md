@@ -22,8 +22,11 @@ On the computer: Python 3.10+ on macOS or Linux.
 
 ## Install
 
+Download the `.whl` from the [latest release](https://github.com/Jeramai/shortcut3ds/releases/latest),
+then:
+
 ```sh
-pipx install https://github.com/Jeramai/shortcut3ds/releases/latest/download/shortcut3ds-py3-none-any.whl
+pipx install ./shortcut3ds-*-py3-none-any.whl
 shortcut3ds setup
 ```
 
