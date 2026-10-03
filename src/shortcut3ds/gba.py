@@ -45,5 +45,6 @@ def find_emulator(sd_root: Path) -> Path | None:
     apps = sd_root / "3ds"
     if not apps.is_dir():
         return None
-    found = sorted(p for p in apps.rglob("*.3dsx") if "mgba" in p.name.lower())
+    # macOS writes "._name" AppleDouble files next to every file on a FAT card.
+    found = sorted(p for p in apps.rglob("*.3dsx") if "mgba" in p.name.lower() and not p.name.startswith("."))
     return found[0] if found else None
