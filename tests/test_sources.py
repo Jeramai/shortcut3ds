@@ -165,3 +165,40 @@ def test_web_and_cli_agree_on_the_title_id(tmp_path, monkeypatch):
 
 def test_web_describe_lists_every_type():
     assert [d["name"] for d in json.loads(web.describe())] == [s.name for s in sources.SOURCES]
+
+
+def test_cli_uses_the_included_mgba_for_a_native_rom(tmp_path, monkeypatch, capsys):
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    make_3dsx(tools_dir / "mgba.3dsx")
+    monkeypatch.setattr(cli.tools.setup, "tools_dir", lambda: tools_dir)
+    built = {}
+    monkeypatch.setattr(cli.cia, "build", lambda shortcut, out: built.setdefault("shortcut", shortcut))
+    rom = make_gba(tmp_path / "Game.gba")
+    assert cli.main(["make", str(rom), "--native", "-o", str(tmp_path / "x.cia")]) == 0
+    assert built["shortcut"].embed == tools_dir / "mgba.3dsx"
+
+
+def test_cli_install_copies_the_included_mgba_for_a_shortcut(tmp_path, monkeypatch):
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    make_3dsx(tools_dir / "mgba.3dsx")
+    monkeypatch.setattr(cli.tools.setup, "tools_dir", lambda: tools_dir)
+    built = {}
+
+    def fake_build(shortcut, out):
+        built["shortcut"] = shortcut
+        out.write_bytes(b"cia")
+
+    monkeypatch.setattr(cli.cia, "build", fake_build)
+    sd = tmp_path / "sd"
+    (sd / "Nintendo 3DS").mkdir(parents=True)
+    rom = (
+        make_gba(sd / "roms" / "gba" / "Game.gba")
+        if (sd / "roms" / "gba").mkdir(parents=True) is None
+        else None
+    )
+    assert cli.main(["make", str(rom), "--install", "-o", str(tmp_path / "x.cia")]) == 0
+    assert (sd / "3ds" / "mgba" / "mgba.3dsx").is_file()
+    assert built["shortcut"].target == "/3ds/mgba/mgba.3dsx"
+    assert built["shortcut"].deliver == b"/roms/gba/Game.gba\0"

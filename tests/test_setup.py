@@ -29,3 +29,10 @@ def test_setup_rejects_a_download_with_the_wrong_hash(tmp_path, monkeypatch):
     setup.fetch(setup.Download("https://x/y.zip", good, "makerom"), tmp_path / "makerom")
     assert (tmp_path / "makerom").read_bytes() == b"binary"
     assert os.access(tmp_path / "makerom", os.X_OK)
+
+
+def test_setup_downloads_the_included_mgba_on_every_platform():
+    assert "mgba.3dsx" in setup.COMMON
+    assert setup.COMMON["mgba.3dsx"].url.startswith(
+        "https://github.com/Jeramai/shortcut3ds/releases/download/"
+    )

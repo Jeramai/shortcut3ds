@@ -6,7 +6,18 @@ from pathlib import Path
 
 from shortcut3ds import __version__, cia, setup, sources, threedsx, tools
 from shortcut3ds.common import load_icon, parse_unique_id, safe_name
-from shortcut3ds.sources.base import FILE, LIST, MODES, NATIVE, SD_PATH, SHORTCUT, AppRef, Look, Request
+from shortcut3ds.sources.base import (
+    FILE,
+    LIST,
+    MODES,
+    NATIVE,
+    SD_PATH,
+    SHORTCUT,
+    AppRef,
+    Look,
+    Option,
+    Request,
+)
 
 
 def sd_root_of(path: Path) -> Path | None:
@@ -53,6 +64,21 @@ def app_ref(source: sources.Source, name: str, value: str | None, root: Path | N
     return AppRef(file=found, sd_path=sd_path_of(found, root)) if found else AppRef()
 
 
+def with_bundled(ref: AppRef, option: Option, need: str, a: argparse.Namespace, root: Path | None) -> AppRef:
+    included = tools.bundled(option.bundled)
+    if included is None:
+        return ref
+    if need == FILE and ref.file is None:
+        return AppRef(file=included, sd_path=ref.sd_path)
+    if need == SD_PATH and not ref.sd_path and a.install and root and option.sd_default:
+        dest = root / option.sd_default.lstrip("/")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(included, dest)
+        print(f"Copied the included {option.bundled} to {dest}.")
+        return AppRef(file=dest, sd_path=option.sd_default)
+    return ref
+
+
 def flag(name: str) -> str:
     return "--" + name.replace("_", "-")
 
@@ -89,7 +115,9 @@ def cmd_make(a: argparse.Namespace) -> int:
         value = getattr(a, option.name, None)
         need = option.need(mode)
         if need in (FILE, SD_PATH):
-            options[option.name] = app_ref(source, option.name, value, root)
+            options[option.name] = with_bundled(
+                app_ref(source, option.name, value, root), option, need, a, root
+            )
         elif value:
             if need is None:
                 raise SystemExit(
@@ -107,7 +135,12 @@ def cmd_make(a: argparse.Namespace) -> int:
     try:
         shortcut = sources.build(source, Request(file, target, mode, options), look)
     except sources.MissingOption as e:
-        raise SystemExit(f"{e} Pass {flag(e.option.name)}.") from None
+        hint = f"Pass {flag(e.option.name)}."
+        if e.need == SD_PATH and tools.bundled(e.option.bundled):
+            hint = f"Add --install to copy the included {e.option.bundled} to the card, or pass {flag(e.option.name)}."
+        elif e.need == FILE and e.option.bundled:
+            hint = f"Run `shortcut3ds setup` to get the included {e.option.bundled}, or pass {flag(e.option.name)}."
+        raise SystemExit(f"{e} {hint}") from None
 
     out = Path(a.output) if a.output else Path.cwd() / f"{safe_name(look.title)}.cia"
     cia.build(shortcut, out)

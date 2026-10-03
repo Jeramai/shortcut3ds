@@ -27,3 +27,8 @@ def stub_elf() -> Path:
     if not path.is_file():
         raise ToolError("data/stub.elf is missing. Build it with `make stub`.")
     return path
+
+
+def bundled(name: str) -> Path | None:
+    path = setup.tools_dir() / name
+    return path if name and path.is_file() else None

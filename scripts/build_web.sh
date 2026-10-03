@@ -6,6 +6,8 @@ cd "$(dirname "$0")/.."
 EMSDK=emscripten/emsdk:6.0.11
 MAKEROM_TAG=makerom-v0.19.0
 BANNERTOOL_COMMIT=734d33be79fd3f8c29c6296158f06ac7c5ca9dcb
+MGBA_ZIP=https://github.com/Jeramai/shortcut3ds/releases/download/mgba-9146/mgba-3ds-9146.zip
+MGBA_SHA256=6a76bfc7c47d14471b0b1bd055faf9985ba22c56bc391503f9fd776deca66bbe
 SRC=build/src
 WASM=build/wasm
 EMFLAGS="-O2 -sMODULARIZE=1 -sEXPORTED_RUNTIME_METHODS=FS,callMain -sINVOKE_RUN=0 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sENVIRONMENT=web,worker -sEXPORT_ES6=1"
@@ -40,6 +42,11 @@ wheel=$(basename "$(ls build/dist)")
 mkdir -p site/tools
 cp web/index.html web/style.css web/app.js web/worker.js web/favicon.svg site/
 for f in makerom.mjs makerom.wasm bannertool.mjs bannertool.wasm; do cp "$WASM/$f" site/tools/; done
+[ -f build/mgba.zip ] || curl -sSfL -o build/mgba.zip "$MGBA_ZIP"
+echo "$MGBA_SHA256  build/mgba.zip" | shasum -a 256 -c - >/dev/null
+unzip -qo build/mgba.zip mgba.3dsx LICENSE -d build/mgba
+cp build/mgba/mgba.3dsx site/tools/mgba.3dsx
+cp build/mgba/LICENSE site/tools/mgba-LICENSE.txt
 hash=$(shasum -a 256 "build/dist/$wheel" | cut -c1-12)
 mkdir -p "site/py/$hash"
 cp "build/dist/$wheel" "site/py/$hash/"

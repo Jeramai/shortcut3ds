@@ -22,6 +22,7 @@ class Option:
     sd_default: str = ""
     accept: str = ""
     link: str = ""
+    bundled: str = ""
 
     def need(self, mode: str) -> str | None:
         return self.needs.get(mode)

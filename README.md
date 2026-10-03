@@ -28,8 +28,10 @@ On the console:
 - **Shortcut mode only:** the Homebrew Launcher Loader title `000400000D921E00`. Install
   [`hblauncher_loader.cia`](https://github.com/yellows8/hblauncher_loader/releases) once with FBI.
   Luma replaces its code with the requested app, so its age does not matter.
-- **GBA games:** an mGBA [development build](https://mgba.io/downloads.html#development-downloads)
-  for 3DS. mGBA 0.10.x releases cannot open a ROM at startup.
+- **GBA games:** nothing extra for native icons; they include a tested
+  [mGBA](https://mgba.io) development build. A GBA shortcut starts mGBA from the card, so copy that
+  build to `SD:/3ds/mgba/mgba.3dsx` (the website links it, and `--install` copies it). mGBA 0.10.x
+  releases cannot open a ROM at startup.
 
 ## Command line
 
@@ -41,9 +43,9 @@ pipx install ./shortcut3ds-*-py3-none-any.whl
 shortcut3ds setup
 ```
 
-`setup` downloads [makerom](https://github.com/3DSGuy/Project_CTR) and
-[bannertool](https://github.com/carstene1ns/3ds-bannertool) to `~/.local/share/shortcut3ds/bin` and
-checks their SHA-256. A copy on `PATH` wins, and so do `SHORTCUT3DS_MAKEROM` and
+`setup` downloads [makerom](https://github.com/3DSGuy/Project_CTR),
+[bannertool](https://github.com/carstene1ns/3ds-bannertool) and the included mGBA build to
+`~/.local/share/shortcut3ds/bin` and checks their SHA-256. A copy on `PATH` wins, and so do `SHORTCUT3DS_MAKEROM` and
 `SHORTCUT3DS_BANNERTOOL`.
 
 Mount the SD card and point at the file on it:
@@ -63,7 +65,7 @@ install it. Leave out `--native` to make a shortcut instead.
 | `--title`, `--publisher` | Text on the HOME Menu (default: the app's own) |
 | `--icon file.png` | Icon to use instead of the app's own |
 | `--target /3ds/x/y.3dsx` | SD path of the file, when it is not on a mounted card |
-| `--emulator PATH` | GBA: mGBA `.3dsx` (default: the first `mgba*.3dsx` under `SD:/3ds`) |
+| `--emulator PATH` | GBA: mGBA `.3dsx` (default: the first `mgba*.3dsx` under `SD:/3ds`, else the included build) |
 | `--arg VALUE`, `--deliver-arg TEXT` | `.3dsx`: arguments for the app (shortcut mode only) |
 | `--unique-id F9C19` | Fixed unique ID in `F8000`–`FEFFF` (default: derived from the path) |
 | `-o file.cia` | Output file |
