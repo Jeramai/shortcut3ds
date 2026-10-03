@@ -4,8 +4,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from shortcut3ds import cia, cli, smdh, threedsx
-from shortcut3ds.cli import DEFAULT_ICON
+from shortcut3ds import cia, cli, gba, smdh, threedsx
+
+ICON = Image.new("RGB", (48, 48))
 
 
 def encode_icon(img: Image.Image) -> bytes:
@@ -80,8 +81,8 @@ def test_target_blob_needs_an_absolute_sd_path(bad):
 
 
 def test_unique_id_is_stable_and_in_the_homebrew_range():
-    a = cia.Shortcut("/3ds/emerald3ds/Emerald3DS.3dsx", "t", "p", DEFAULT_ICON)
-    b = cia.Shortcut("/3DS/EMERALD3DS/Emerald3DS.3dsx", "t", "p", DEFAULT_ICON)
+    a = cia.Shortcut("/3ds/emerald3ds/Emerald3DS.3dsx", "t", "p", ICON)
+    b = cia.Shortcut("/3DS/EMERALD3DS/Emerald3DS.3dsx", "t", "p", ICON)
     assert a.resolved_unique_id() == b.resolved_unique_id()
     assert cia.UNIQUE_ID_FIRST <= a.resolved_unique_id() < cia.UNIQUE_ID_FIRST + cia.UNIQUE_ID_COUNT
     assert a.title_id() >> 32 == 0x00040000
@@ -96,5 +97,45 @@ def test_sd_target_is_relative_to_the_card_root(tmp_path):
 
 
 def test_rsf_has_no_bare_colon_list_items():
-    text = cia.rsf(cia.Shortcut("/a.3dsx", "t", "p", DEFAULT_ICON), Path("/r"))
+    text = cia.rsf(cia.Shortcut("/a.3dsx", "t", "p", ICON), Path("/r"))
     assert not [line for line in text.splitlines() if line.strip().startswith("- ") and line.endswith(":")]
+
+
+def make_gba(path: Path, title: bytes = b"POKEMON EMER") -> Path:
+    rom = bytearray(0x200)
+    rom[gba.TITLE_OFFSET : gba.TITLE_OFFSET + len(title)] = title
+    rom[gba.FIXED_VALUE_OFFSET] = 0x96
+    path.write_bytes(bytes(rom))
+    return path
+
+
+def test_gba_title_drops_region_and_revision_tags(tmp_path):
+    rom = make_gba(tmp_path / "Pokemon - Emerald Version (USA, Europe) [!].gba")
+    assert gba.title_from_name(rom) == "Pokemon - Emerald Version"
+
+
+def test_gba_title_falls_back_to_the_header(tmp_path):
+    assert gba.title_from_name(make_gba(tmp_path / "(USA).gba")) == "Pokemon Emer"
+
+
+def test_gba_rom_check_uses_the_fixed_header_byte(tmp_path):
+    assert gba.is_gba_rom(make_gba(tmp_path / "a.gba"))
+    (tmp_path / "b.gba").write_bytes(bytes(0x200))
+    assert not gba.is_gba_rom(tmp_path / "b.gba")
+
+
+def test_gba_initials_skip_filler_words():
+    assert gba._initials("The Legend of Zelda") == "LZ"
+    assert gba._initials("Pokemon - Emerald Version") == "PE"
+
+
+def test_gba_shortcuts_for_two_roms_get_different_ids():
+    a = cia.Shortcut("/3ds/mgba.3dsx", "a", "", ICON, id_key="/roms/gba/a.gba")
+    b = cia.Shortcut("/3ds/mgba.3dsx", "b", "", ICON, id_key="/roms/gba/b.gba")
+    assert a.resolved_unique_id() != b.resolved_unique_id()
+
+
+def test_find_emulator_looks_under_3ds(tmp_path):
+    (tmp_path / "3ds" / "mGBA").mkdir(parents=True)
+    (tmp_path / "3ds" / "mGBA" / "mgba.3dsx").touch()
+    assert gba.find_emulator(tmp_path) == tmp_path / "3ds" / "mGBA" / "mgba.3dsx"

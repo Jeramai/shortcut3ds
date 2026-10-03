@@ -6,8 +6,12 @@
 #define HB_TITLE_ID 0x000400000D921E00ULL
 #define ARGV_SIZE 0x400
 
+#define DELIVER_SIZE 0x300
+
 static char target[ARGV_SIZE];
 static u32 argvBuf[ARGV_SIZE / 4];
+static u8 deliver[DELIVER_SIZE];
+static size_t deliverSize;
 
 static void fail(const char *fmt, const char *detail)
 {
@@ -36,6 +40,13 @@ static bool readTarget(void)
 	size_t n = fread(target, 1, sizeof(target) - 1, f);
 	fclose(f);
 	target[n] = '\0';
+
+	f = fopen("romfs:/deliver", "rb");
+	if (f)
+	{
+		deliverSize = fread(deliver, 1, sizeof(deliver), f);
+		fclose(f);
+	}
 	return target[0] == '/';
 }
 
@@ -133,6 +144,8 @@ int main(void)
 		return 0;
 	}
 
+	if (deliverSize)
+		aptSetChainloaderArgs(deliver, deliverSize, NULL);
 	aptSetChainloader(HB_TITLE_ID, MEDIATYPE_SD);
 	return 0;
 }

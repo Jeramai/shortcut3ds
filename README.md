@@ -1,6 +1,6 @@
 # shortcut3ds
 
-Put any 3DS homebrew app (`.3dsx`) on the HOME Menu, from macOS or Linux.
+Put any 3DS homebrew app (`.3dsx`) or GBA ROM on the HOME Menu, from macOS or Linux.
 
 `shortcut3ds` builds a small CIA that shows the app's own icon and name. When you open it, it asks
 Luma3DS's homebrew loader to start the `.3dsx` from the SD card. The app itself stays where it is,
@@ -43,8 +43,27 @@ Options:
 | `--target /3ds/x/y.3dsx` | SD path of the app, when the `.3dsx` is not on a mounted card |
 | `--title`, `--publisher` | Text on the HOME Menu (default: the app's own) |
 | `--arg VALUE` | Extra argument for the app; repeatable |
+| `--deliver-arg TEXT` | Text passed to the app as the APT deliver arg |
+| `--icon file.png` | Icon to use instead of the app's own |
 | `--unique-id F9C19` | Fixed unique id (default: derived from the path, in `F8000`–`FEFFF`) |
 | `-o file.cia` | Output file |
+
+### GBA ROMs
+
+```sh
+shortcut3ds gba "/Volumes/3DS/roms/gba/Pokemon Emerald.gba" --install
+```
+
+The shortcut opens the ROM in mGBA. It sends the ROM path to mGBA as the APT deliver arg, so no
+Nintendo files are involved and the ROM stays on the SD card. The icon shows the game's initials,
+because GBA ROMs have no icon; pass `--icon cover.png` for a better one.
+
+This needs an mGBA **development build** for 3DS (from
+[mgba.io/downloads.html](https://mgba.io/downloads.html#development-downloads)) somewhere under
+`SD:/3ds`. mGBA 0.10.x releases do not read a ROM path at startup. Use `--emulator` when the
+`.3dsx` is not named `mgba*.3dsx`.
+
+### Remove a shortcut
 
 To remove a shortcut, delete it in **System Settings > Data Management**. The app on the SD card
 stays.
@@ -53,7 +72,7 @@ stays.
 
 The stub (`stub/source/main.c`) reads the target path from its RomFS. It checks that the file and
 the loader title exist, and sends the path and `argv` to `hb:ldr`. Then it chainloads
-`000400000D921E00`. Luma's loader builds that process from the `.3dsx` instead of the title's own
+`000400000D921E00`, with the deliver arg when there is one. Luma's loader builds that process from the `.3dsx` instead of the title's own
 code. `argv[0]` is `sdmc:/…`, so the app can mount its own RomFS.
 
 ## Build
