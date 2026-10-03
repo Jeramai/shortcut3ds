@@ -8,8 +8,24 @@ dynamic = ["version"]
 description = "Make Nintendo 3DS HOME Menu shortcuts for homebrew apps, on macOS and Linux"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE", "NOTICE.md"]
+authors = [{ name = "Jeramai Faber" }]
+keywords = ["3ds", "nintendo-3ds", "homebrew", "cia", "forwarder", "gba", "mgba"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
 requires-python = ">=3.10"
 dependencies = ["Pillow>=10.1"]
+
+[project.urls]
+Homepage = "https://jeramai.github.io/shortcut3ds/"
+Source = "https://github.com/Jeramai/shortcut3ds"
+Issues = "https://github.com/Jeramai/shortcut3ds/issues"
 
 [project.scripts]
 shortcut3ds = "shortcut3ds.cli:main"
