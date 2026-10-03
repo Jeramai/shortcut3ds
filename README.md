@@ -55,7 +55,6 @@ Options:
 | `--arg VALUE` | Extra argument for the app; repeatable |
 | `--deliver-arg TEXT` | Text passed to the app as the APT deliver arg |
 | `--icon file.png` | Icon to use instead of the app's own |
-| `--logo homebrew` | Show the homebrew splash while the app loads (default: no splash) |
 | `--unique-id F9C19` | Fixed unique id (default: derived from the path, in `F8000`–`FEFFF`) |
 | `-o file.cia` | Output file |
 

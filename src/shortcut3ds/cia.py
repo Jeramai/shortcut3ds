@@ -131,7 +131,6 @@ class Shortcut:
     id_key: str | None = None
     embed: Path | None = None
     romfs_files: dict[str, Path | bytes] = field(default_factory=dict)
-    logo: str = "None"
 
     def resolved_unique_id(self) -> int:
         if self.unique_id is not None:
@@ -157,6 +156,7 @@ def target_blob(target: str, args: tuple[str, ...]) -> bytes:
     return blob
 
 
+# The HOME Menu will not launch a title without a logo; it reports "SD card removed".
 def rsf(shortcut: Shortcut, romfs: Path) -> str:
     uid = shortcut.resolved_unique_id()
     is_native = shortcut.embed is not None
@@ -181,7 +181,7 @@ def rsf(shortcut: Shortcut, romfs: Path) -> str:
     return f"""BasicInfo:
   Title: "SC{uid:05X}"
   ProductCode: "CTR-H-{uid:05X}"
-  Logo: {shortcut.logo}
+  Logo: Homebrew
 RomFs:
   RootPath: "{romfs}"
 TitleInfo:
