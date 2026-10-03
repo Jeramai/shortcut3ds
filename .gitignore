@@ -1,0 +1,12 @@
+.tools/
+build/
+out/
+__pycache__/
+*.egg-info/
+.venv/
+*.cia
+*.3dsx
+*.gba
+.DS_Store
+stub/stub.elf
+src/shortcut3ds/data/stub.elf

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shortcut3ds"
+dynamic = ["version"]
+description = "Make Nintendo 3DS HOME Menu shortcuts for homebrew apps, on macOS and Linux"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["Pillow>=10.1"]
+
+[project.scripts]
+shortcut3ds = "shortcut3ds.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.dynamic]
+version = { attr = "shortcut3ds.__version__" }
+
+[tool.setuptools.package-data]
+shortcut3ds = ["data/stub.elf"]
+
+[tool.ruff]
+line-length = 110
