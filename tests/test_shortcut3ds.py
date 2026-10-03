@@ -142,6 +142,7 @@ def test_gba_shortcuts_for_two_roms_get_different_ids():
 def test_find_emulator_looks_under_3ds(tmp_path):
     (tmp_path / "3ds" / "mGBA").mkdir(parents=True)
     (tmp_path / "3ds" / "mGBA" / "mgba.3dsx").touch()
+    (tmp_path / "3ds" / "mGBA" / "._mgba.3dsx").touch()
     assert gba.find_emulator(tmp_path) == tmp_path / "3ds" / "mGBA" / "mgba.3dsx"
 
 
