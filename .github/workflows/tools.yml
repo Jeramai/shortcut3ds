@@ -1,0 +1,58 @@
+name: Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag for the tool binaries
+        required: true
+        default: tools-1
+
+env:
+  BANNERTOOL_REPO: carstene1ns/3ds-bannertool
+  BANNERTOOL_COMMIT: 734d33be79fd3f8c29c6296158f06ac7c5ca9dcb
+
+jobs:
+  bannertool:
+    strategy:
+      matrix:
+        include:
+          - { os: macos-15, platform: macos_arm64 }
+          - { os: macos-15-intel, platform: macos_x86_64 }
+          - { os: ubuntu-24.04, platform: linux_x86_64, ldflags: "-static-libstdc++ -static-libgcc" }
+          - { os: ubuntu-24.04-arm, platform: linux_arm64, ldflags: "-static-libstdc++ -static-libgcc" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.BANNERTOOL_REPO }}
+          ref: ${{ env.BANNERTOOL_COMMIT }}
+      # Apple clang rejects the initialised variable-length array upstream.
+      - run: perl -pi -e 's/u8 pad\[padLength\] = \{0\};/u8 pad[4] = {0};/' source/3ds/lz11.cpp
+      - run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.ldflags }}"
+          cmake --build build -j4
+          ./build/bannertool 2>&1 | head -1
+          cd build && zip ../bannertool-${{ matrix.platform }}.zip bannertool
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bannertool-${{ matrix.platform }}
+          path: bannertool-${{ matrix.platform }}.zip
+
+  release:
+    needs: bannertool
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          merge-multiple: true
+      - run: sha256sum *.zip | tee SHA256SUMS
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ inputs.tag }}" --repo "${{ github.repository }}" --prerelease \
+            --title "Tool binaries (${{ inputs.tag }})" \
+            --notes "bannertool from ${{ env.BANNERTOOL_REPO }}@${{ env.BANNERTOOL_COMMIT }} (MIT), built by CI. Used by \`shortcut3ds setup\`." \
+            *.zip SHA256SUMS
