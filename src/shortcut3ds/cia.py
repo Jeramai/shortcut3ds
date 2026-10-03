@@ -12,6 +12,7 @@ from shortcut3ds import banner, native, tools
 UNIQUE_ID_FIRST = 0xF8000
 UNIQUE_ID_COUNT = 0x7000
 DELIVER_ARG_MAX = 0x300
+OUTPUT = "out.cia"
 TARGET_BLOB_MAX = 0x400 - 8
 
 SYSCALLS = {
@@ -230,82 +231,47 @@ SystemControlInfo:
 """
 
 
+def prepare(shortcut: Shortcut, work: Path) -> list[list[str]]:
+    romfs = work / "romfs"
+    romfs.mkdir()
+    if shortcut.embed:
+        _native_code(shortcut, work, romfs)
+    else:
+        shutil.copyfile(tools.stub_elf(), work / "app.elf")
+        (romfs / "target").write_bytes(target_blob(shortcut.target, shortcut.args))
+        if shortcut.deliver:
+            if len(shortcut.deliver) > DELIVER_ARG_MAX:
+                raise ValueError(f"the deliver arg is longer than {DELIVER_ARG_MAX} bytes")
+            (romfs / "deliver").write_bytes(shortcut.deliver)
+
+    icon = shortcut.icon.convert("RGB").resize((48, 48), Image.LANCZOS)
+    icon.save(work / "icon.png")
+    banner.render(icon, shortcut.title, shortcut.publisher).save(work / "banner.png")
+    banner.write_silence(work / "silence.wav")
+    (work / "app.rsf").write_text(rsf(shortcut, Path("romfs")))
+
+    publisher = (shortcut.publisher or "shortcut3ds")[:63]
+    return [
+        ["bannertool", "makesmdh", "-s", shortcut.title[:63], "-l", shortcut.title[:127], "-p", publisher,
+         "-i", "icon.png", "-o", "icon.icn"],
+        ["bannertool", "makebanner", "-i", "banner.png", "-a", "silence.wav", "-o", "banner.bnr"],
+        ["makerom", "-f", "cia", "-o", OUTPUT, "-elf", "app.elf", "-rsf", "app.rsf", "-icon", "icon.icn",
+         "-banner", "banner.bnr", "-target", "t", "-ver", "0"],
+    ]  # fmt: skip
+
+
 def build(shortcut: Shortcut, out: Path) -> Path:
-    makerom, bannertool = tools.find("makerom"), tools.find("bannertool")
+    paths = {"makerom": tools.find("makerom"), "bannertool": tools.find("bannertool")}
     with tempfile.TemporaryDirectory(prefix="shortcut3ds-") as tmp:
         work = Path(tmp)
-        romfs = work / "romfs"
-        romfs.mkdir()
-        if shortcut.embed:
-            elf = _native_code(shortcut, work, romfs)
-        else:
-            elf = tools.stub_elf()
-            (romfs / "target").write_bytes(target_blob(shortcut.target, shortcut.args))
-            if shortcut.deliver:
-                if len(shortcut.deliver) > DELIVER_ARG_MAX:
-                    raise ValueError(f"the deliver arg is longer than {DELIVER_ARG_MAX} bytes")
-                (romfs / "deliver").write_bytes(shortcut.deliver)
-
-        icon = shortcut.icon.convert("RGB").resize((48, 48), Image.LANCZOS)
-        icon.save(work / "icon.png")
-        banner.render(icon, shortcut.title, shortcut.publisher).save(work / "banner.png")
-        banner.write_silence(work / "silence.wav")
-        (work / "app.rsf").write_text(rsf(shortcut, romfs))
-
-        _run(
-            [
-                bannertool,
-                "makesmdh",
-                "-s",
-                shortcut.title[:63],
-                "-l",
-                shortcut.title[:127],
-                "-p",
-                (shortcut.publisher or "shortcut3ds")[:63],
-                "-i",
-                work / "icon.png",
-                "-o",
-                work / "icon.icn",
-            ]
-        )
-        _run(
-            [
-                bannertool,
-                "makebanner",
-                "-i",
-                work / "banner.png",
-                "-a",
-                work / "silence.wav",
-                "-o",
-                work / "banner.bnr",
-            ]
-        )
+        for cmd in prepare(shortcut, work):
+            _run([str(paths[cmd[0]]), *cmd[1:]], work)
         out.parent.mkdir(parents=True, exist_ok=True)
-        _run(
-            [
-                makerom,
-                "-f",
-                "cia",
-                "-o",
-                out,
-                "-elf",
-                elf,
-                "-rsf",
-                work / "app.rsf",
-                "-icon",
-                work / "icon.icn",
-                "-banner",
-                work / "banner.bnr",
-                "-target",
-                "t",
-                "-ver",
-                "0",
-            ]
-        )
+        shutil.copyfile(work / OUTPUT, out)
     return out
 
 
-def _native_code(shortcut: Shortcut, work: Path, romfs: Path) -> Path:
+def _native_code(shortcut: Shortcut, work: Path, romfs: Path) -> None:
     program = native.load(shortcut.embed)
     if program.romfs:
         native.extract_romfs(program.romfs, romfs)
@@ -318,12 +284,10 @@ def _native_code(shortcut: Shortcut, work: Path, romfs: Path) -> Path:
             dest.write_bytes(source)
         else:
             shutil.copyfile(source, dest)
-    elf = work / "app.elf"
-    elf.write_bytes(native.to_elf(program))
-    return elf
+    (work / "app.elf").write_bytes(native.to_elf(program))
 
 
-def _run(cmd: list) -> None:
-    result = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, check=False)
+def _run(cmd: list[str], cwd: Path) -> None:
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise tools.ToolError(f"{Path(str(cmd[0])).name} failed:\n{result.stdout}{result.stderr}")

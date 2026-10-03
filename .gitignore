@@ -11,3 +11,4 @@ __pycache__/
 stub/stub.elf
 src/shortcut3ds/data/stub.elf
 stub/stub.3dsx
+site/

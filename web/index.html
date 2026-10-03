@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>shortcut3ds</title>
+  <meta name="description" content="Turn a 3DS homebrew app or a GBA ROM into a HOME Menu icon. Runs in your browser; your files never leave your device.">
+  <meta property="og:title" content="shortcut3ds">
+  <meta property="og:description" content="Turn a 3DS homebrew app or a GBA ROM into a HOME Menu icon, right in your browser.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the converter</a>
+  <header class="top">
+    <a class="brand" href="./" aria-current="page"><img src="favicon.svg" alt="" width="24" height="24">shortcut3ds</a>
+    <a class="ghost" href="https://github.com/Jeramai/shortcut3ds">GitHub</a>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <h1>Your homebrew and GBA games,<br>right on the HOME Menu</h1>
+      <p class="lead">Drop a <code>.3dsx</code> app or a GBA ROM, get a <code>.cia</code> to install with FBI.
+        It all runs in this tab; your files never leave your device.</p>
+    </section>
+
+    <section class="card" aria-labelledby="tool-title">
+      <h2 id="tool-title" class="sr">Converter</h2>
+
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept=".3dsx,.gba">
+        <span class="drop-title">Choose a <code>.3dsx</code> or <code>.gba</code> file</span>
+        <span class="drop-hint">or drop it here</span>
+      </label>
+
+      <form id="form" hidden>
+        <div class="picked">
+          <img id="icon-preview" src="favicon.svg" alt="Icon preview" width="48" height="48">
+          <div>
+            <div id="picked-name" class="picked-name"></div>
+            <div id="picked-kind" class="muted"></div>
+          </div>
+          <button type="button" class="ghost small" id="change">Change file</button>
+        </div>
+
+        <fieldset class="modes">
+          <legend>How should it open?</legend>
+          <label class="mode">
+            <input type="radio" name="mode" value="native" checked>
+            <span><strong>Native</strong><span class="muted">Opens as its own title. Rebuild after app updates.</span></span>
+          </label>
+          <label class="mode">
+            <input type="radio" name="mode" value="forwarder">
+            <span><strong>Shortcut</strong><span class="muted">Tiny; starts the app on your SD card via the Homebrew Launcher Loader.</span></span>
+          </label>
+        </fieldset>
+
+        <div class="grid">
+          <label>Title<input id="title" maxlength="63" required></label>
+          <label>Publisher<input id="publisher" maxlength="63"></label>
+        </div>
+
+        <label data-show="3dsx forwarder">Where the app is on the SD card
+          <input id="target-3dsx" placeholder="/3ds/app/app.3dsx" pattern="/.*">
+        </label>
+        <label data-show="gba forwarder">Where the ROM is on the SD card
+          <input id="target-rom" placeholder="/roms/gba/game.gba" pattern="/.*">
+        </label>
+        <label data-show="gba forwarder">Where mGBA is on the SD card
+          <input id="target-mgba" value="/3ds/mgba/mgba.3dsx" pattern="/.*">
+        </label>
+        <label data-show="gba native">mGBA <code>.3dsx</code> file
+          <input type="file" id="emulator" accept=".3dsx">
+          <span class="muted">Use a <a href="https://mgba.io/downloads.html#development-downloads">development build</a>; it is put inside the CIA together with the ROM.</span>
+        </label>
+        <p class="note" data-show="gba">mGBA names the save after the ROM file. Keep the same file name to keep your save.</p>
+
+        <details>
+          <summary>More options</summary>
+          <label>Icon (PNG, made square to 48 × 48)<input type="file" id="icon" accept="image/png"></label>
+          <label>Unique ID (hex, F8000 to FEFFF)<input id="unique-id" placeholder="from the path" pattern="[0-9A-Fa-f]{5}"></label>
+        </details>
+
+        <button class="primary" id="build">Build the .cia</button>
+      </form>
+
+      <p class="error" id="error" role="alert" hidden></p>
+      <div class="status" id="status" aria-live="polite" hidden>
+        <div class="bar"><span></span></div>
+        <span id="status-text"></span>
+      </div>
+      <div class="done" id="done" hidden>
+        <a class="primary" id="download" href="#main">Download</a>
+        <p class="muted" id="done-info"></p>
+      </div>
+    </section>
+
+    <section class="steps" aria-labelledby="steps-title">
+      <h2 id="steps-title">Install it on your 3DS</h2>
+      <ol>
+        <li><strong>Copy the .cia</strong> to your SD card, for example into <code>/cia</code>.</li>
+        <li><strong>Open FBI</strong>, go to SD, find the file and choose Install.</li>
+        <li><strong>Open the new icon</strong> on the HOME Menu.</li>
+      </ol>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title">Questions</h2>
+      <details><summary>What do I need on the console?</summary>
+        <p>Custom firmware with Luma3DS, and FBI to install the file. Shortcut mode also needs the Homebrew Launcher Loader title <code>000400000D921E00</code>; install <a href="https://github.com/yellows8/hblauncher_loader/releases">hblauncher_loader.cia</a> once.</p></details>
+      <details><summary>Native or shortcut?</summary>
+        <p>Native opens straight into the app and returns to its own icon when you close it. A shortcut is tiny and always starts the newest version of the app on your card, but it passes through the Homebrew Launcher Loader.</p></details>
+      <details><summary>Are my files uploaded?</summary>
+        <p>No. The converter is Python and WebAssembly running in this tab. Nothing is sent anywhere; the page only downloads its own code.</p></details>
+      <details><summary>Why is there a homebrew logo when the app starts?</summary>
+        <p>The HOME Menu refuses to open a title without a start logo, so every CIA carries the standard homebrew logo.</p></details>
+      <details><summary>How do I remove an icon?</summary>
+        <p>Delete it in System Settings, Data Management. The app and its saves on the SD card stay.</p></details>
+      <details><summary>Can I use this on a computer instead?</summary>
+        <p>Yes. The <a href="https://github.com/Jeramai/shortcut3ds">command line tool</a> does the same on macOS and Linux, and it can make shortcuts for a whole folder.</p></details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>MIT licensed. Not affiliated with Nintendo. Only use files you own.</p>
+    <a href="https://github.com/Jeramai/shortcut3ds">Source on GitHub</a>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
