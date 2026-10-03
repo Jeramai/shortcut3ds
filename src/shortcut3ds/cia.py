@@ -4,11 +4,13 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
+from PIL import Image
+
 from shortcut3ds import banner, tools
-from shortcut3ds.smdh import Smdh
 
 UNIQUE_ID_FIRST = 0xF8000
 UNIQUE_ID_COUNT = 0x7000
+DELIVER_ARG_MAX = 0x300
 
 SYSCALLS = {
     "ControlMemory": 1,
@@ -91,14 +93,17 @@ class Shortcut:
     target: str
     title: str
     publisher: str
-    icon_smdh: Smdh
+    icon: Image.Image
     args: tuple[str, ...] = ()
+    deliver: bytes = b""
     unique_id: int | None = None
+    id_key: str | None = None
 
     def resolved_unique_id(self) -> int:
         if self.unique_id is not None:
             return self.unique_id
-        return UNIQUE_ID_FIRST + zlib.crc32(self.target.lower().encode()) % UNIQUE_ID_COUNT
+        key = (self.id_key or self.target).lower().encode()
+        return UNIQUE_ID_FIRST + zlib.crc32(key) % UNIQUE_ID_COUNT
 
     def title_id(self) -> int:
         return 0x0004000000000000 | self.resolved_unique_id() << 8
@@ -176,8 +181,12 @@ def build(shortcut: Shortcut, out: Path) -> Path:
         romfs = work / "romfs"
         romfs.mkdir()
         (romfs / "target").write_bytes(target_blob(shortcut.target, shortcut.args))
+        if shortcut.deliver:
+            if len(shortcut.deliver) > DELIVER_ARG_MAX:
+                raise ValueError(f"the deliver arg is longer than {DELIVER_ARG_MAX} bytes")
+            (romfs / "deliver").write_bytes(shortcut.deliver)
 
-        icon = shortcut.icon_smdh.icon
+        icon = shortcut.icon.convert("RGB").resize((48, 48), Image.LANCZOS)
         icon.save(work / "icon.png")
         banner.render(icon, shortcut.title, shortcut.publisher).save(work / "banner.png")
         banner.write_silence(work / "silence.wav")
