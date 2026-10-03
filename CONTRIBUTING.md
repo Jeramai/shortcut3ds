@@ -78,7 +78,8 @@ class Nes(Source):
 | `LIST` | Repeatable text | `--name A --name B` | not shown |
 
 Set `bundled="name.3dsx"` when the project ships a tested copy of the app (like mGBA). Then the
-website and the CLI use that copy when the user chooses none, and `--install` copies it to
+website always uses that copy and shows no field for it, the CLI uses it unless the user passes
+the flag, and `--install` copies it to
 `sd_default` for shortcuts. Shipping a copy also needs a release asset, an entry in
 `setup.COMMON`, a line in `scripts/build_web.sh` and an entry in `NOTICE.md` with its licence and
 source.

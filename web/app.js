@@ -33,9 +33,18 @@ function renderOptions() {
   box.replaceChildren();
   $("target-field").hidden = mode() !== "shortcut";
   $("target").disabled = $("target-field").hidden;
+  const notes = [];
   for (const option of source.options) {
     const need = option.needs[mode()];
     if (!need || need === "list") continue;
+    if (option.bundled) {
+      if (need === "sd_path") {
+        const folder = option.sd_default.replace(/[^/]+$/, "");
+        const link = element("a", { href: `tools/${option.bundled}`, download: option.bundled }, option.bundled);
+        notes.push(element("span", {}, "Copy ", link, ` to ${folder} on your card. `));
+      }
+      continue;
+    }
     const id = `option-${option.name}`;
     const key = `${source.name}/${option.name}/${need}`;
     if (!optionInputs.has(key)) {
@@ -54,20 +63,14 @@ function renderOptions() {
     const input = optionInputs.get(key);
     const label = element("label", { for: id }, need === "sd_path" ? `Where ${option.label} is on the SD card` : option.label, input);
     const help = element("span", { class: "muted" });
-    if (option.bundled && need === "file") {
-      help.append(`Leave empty to use the included ${option.bundled}, or choose your own. `);
-    } else if (option.bundled && need === "sd_path") {
-      const download = element("a", { href: `tools/${option.bundled}`, download: option.bundled }, `Download ${option.bundled}`);
-      help.append("Not on your card yet? ", download, " and copy it there.");
-    } else {
-      if (option.help) help.append(option.help + " ");
-      if (option.link) help.append(element("a", { href: option.link }, "Download"));
-    }
+    if (option.help) help.append(option.help + " ");
+    if (option.link) help.append(element("a", { href: option.link }, "Download"));
     if (help.childNodes.length) label.append(help);
     box.append(label);
   }
-  $("notes").textContent = source.notes.join(" ");
-  $("notes").hidden = source.notes.length === 0;
+  box.hidden = box.childElementCount === 0;
+  $("notes").replaceChildren(...notes, source.notes.join(" "));
+  $("notes").hidden = notes.length === 0 && source.notes.length === 0;
 }
 
 function showError(message) {
@@ -147,14 +150,17 @@ $("form").addEventListener("submit", async (e) => {
   };
   for (const option of source.options) {
     const need = option.needs[spec.mode];
-    const input = $(`option-${option.name}`);
-    if (!input) continue;
-    if (need === "file") {
-      files[`option:${option.name}`] =
-        (await readInput(input)) || (option.bundled && { name: option.bundled, url: `tools/${option.bundled}` });
+    if (option.bundled && need === "file") {
+      files[`option:${option.name}`] = { name: option.bundled, url: `tools/${option.bundled}` };
+    } else if (option.bundled && need === "sd_path") {
+      spec.options[option.name] = { sd_path: option.sd_default };
+    } else {
+      const input = $(`option-${option.name}`);
+      if (!input) continue;
+      if (need === "file") files[`option:${option.name}`] = await readInput(input);
+      else if (need === "sd_path") spec.options[option.name] = { sd_path: input.value };
+      else spec.options[option.name] = input.value;
     }
-    else if (need === "sd_path") spec.options[option.name] = { sd_path: input.value };
-    else spec.options[option.name] = input.value;
   }
   busy(true);
   setStatus(steps[0]);
