@@ -33,7 +33,7 @@ function setStatus(text) {
   $("status").hidden = false;
   $("status-text").textContent = text;
   const index = Math.max(0, steps.findIndex((step) => text.startsWith(step)));
-  $("status").querySelector(".bar span").style.width = `${((index + 1) / (steps.length + 1)) * 100}%`;
+  $("status").querySelector(".bar span").style.transform = `scaleX(${(index + 1) / (steps.length + 1)})`;
 }
 
 function busy(on) {
