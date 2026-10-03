@@ -242,3 +242,13 @@ def test_3dsx_without_prm_is_refused(tmp_path):
     (tmp_path / "x.3dsx").write_bytes(bytes(raw))
     with pytest.raises(threedsx.ThreeDsxError):
         native.load(tmp_path / "x.3dsx")
+
+
+def test_rsf_has_no_logo_by_default():
+    text = cia.rsf(cia.Shortcut("/a.3dsx", "t", "p", ICON), Path("/r"))
+    assert "  Logo: None\n" in text
+
+
+def test_rsf_can_keep_the_homebrew_logo():
+    text = cia.rsf(cia.Shortcut("/a.3dsx", "t", "p", ICON, logo="Homebrew"), Path("/r"))
+    assert "  Logo: Homebrew\n" in text
