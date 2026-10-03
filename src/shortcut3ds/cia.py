@@ -131,7 +131,6 @@ class Shortcut:
     id_key: str | None = None
     embed: Path | None = None
     romfs_files: dict[str, Path | bytes] = field(default_factory=dict)
-    logo_file: Path | None = None
 
     def resolved_unique_id(self) -> int:
         if self.unique_id is not None:
@@ -297,7 +296,6 @@ def build(shortcut: Shortcut, out: Path) -> Path:
                 work / "icon.icn",
                 "-banner",
                 work / "banner.bnr",
-                *(["-logo", shortcut.logo_file] if shortcut.logo_file else []),
                 "-target",
                 "t",
                 "-ver",

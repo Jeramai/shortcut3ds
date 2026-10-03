@@ -30,7 +30,3 @@ def stub_elf() -> Path:
     if not path.is_file():
         raise ToolError("data/stub.elf is missing. Build it with `make stub`.")
     return path
-
-
-def black_logo() -> Path:
-    return Path(str(resources.files("shortcut3ds") / "data" / "logo-black.bin"))
