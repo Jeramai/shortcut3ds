@@ -9,6 +9,7 @@ const steps = [
 ];
 
 let picked = null;
+let pending = null;
 let kind = null;
 let downloadUrl = null;
 
@@ -20,7 +21,7 @@ function refresh() {
   for (const el of document.querySelectorAll("[data-show]")) {
     const need = el.dataset.show.split(" ");
     el.hidden = !need.every((word) => word === kind || word === mode());
-    for (const input of el.querySelectorAll("input")) input.required = !el.hidden && input.id !== "unique-id";
+    for (const input of el.querySelectorAll("input")) input.disabled = el.hidden;
   }
 }
 
@@ -43,8 +44,8 @@ function busy(on) {
 }
 
 async function pick(file) {
-  if (!file) return;
-  picked = file;
+  if (!file || $("file").disabled) return;
+  pending = file;
   showError("");
   $("done").hidden = true;
   busy(true);
@@ -106,6 +107,7 @@ worker.onmessage = ({ data }) => {
     setStatus(data.value);
   } else if (data.type === "inspected") {
     busy(false);
+    picked = pending;
     kind = data.value.kind;
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;

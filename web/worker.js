@@ -3,12 +3,19 @@ import createMakerom from "./tools/makerom.mjs";
 import createBannertool from "./tools/bannertool.mjs";
 
 const factories = { makerom: createMakerom, bannertool: createBannertool };
-let py = null;
+let ready = null;
 
-async function engine() {
-  if (py) return py;
+function engine() {
+  ready ??= start().catch((error) => {
+    ready = null;
+    throw error;
+  });
+  return ready;
+}
+
+async function start() {
   post("status", "Loading the converter (about 15 MB, only the first time)");
-  py = await loadPyodide();
+  const py = await loadPyodide();
   await py.loadPackage(["pillow", "micropip"]);
   const manifest = await (await fetch("manifest.json", { cache: "no-store" })).json();
   await py.pyimport("micropip").install(new URL(manifest.wheel, self.location.href).href);
@@ -40,21 +47,21 @@ function walk(fs, dir, visit, rel = "") {
   }
 }
 
-async function runTool(tool, args) {
+async function runTool(fs, tool, args) {
   let log = "";
   const mod = await factories[tool]({
     print: (s) => (log += s + "\n"),
     printErr: (s) => (log += s + "\n"),
   });
   mod.FS.mkdir("/work");
-  walk(py.FS, "/work", (path, data) =>
+  walk(fs, "/work", (path, data) =>
     data === null ? mod.FS.mkdirTree("/work/" + path) : mod.FS.writeFile("/work/" + path, data),
   );
   mod.FS.chdir("/work");
   const code = mod.callMain(args);
   if (code !== 0) throw new Error(`${tool} failed:\n${log}`);
   walk(mod.FS, "/work", (path, data) =>
-    data === null ? py.FS.mkdirTree("/work/" + path) : py.FS.writeFile("/work/" + path, data),
+    data === null ? fs.mkdirTree("/work/" + path) : fs.writeFile("/work/" + path, data),
   );
 }
 
@@ -76,7 +83,7 @@ const handlers = {
     const labels = { makesmdh: "Making the HOME Menu icon", makebanner: "Making the banner" };
     for (const [tool, ...args] of plan.commands) {
       post("status", labels[args[0]] || "Packing the CIA");
-      await runTool(tool, args);
+      await runTool(p.FS, tool, args);
     }
     const cia = p.FS.readFile("/work/out.cia");
     post("built", cia, { filename: plan.filename, titleId: plan.title_id });

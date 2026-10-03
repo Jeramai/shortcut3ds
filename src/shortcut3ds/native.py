@@ -149,9 +149,12 @@ def to_elf(program: Program) -> bytes:
     return head + bytes(data_offset - len(head)) + body + shstrtab + shdrs
 
 
-def _name(raw: bytes, offset: int) -> tuple[str, int]:
+def _name(raw: bytes, offset: int) -> str:
     (length,) = struct.unpack_from("<I", raw, offset)
-    return raw[offset + 4 : offset + 4 + length].decode("utf-16-le"), length
+    name = raw[offset + 4 : offset + 4 + length].decode("utf-16-le")
+    if name in ("", ".", "..") or any(c in name for c in "/\\\0"):
+        raise ThreeDsxError(f"the app's RomFS has an unsafe name {name!r}")
+    return name
 
 
 def extract_romfs(raw: bytes, dest: Path) -> int:
@@ -167,7 +170,7 @@ def extract_romfs(raw: bytes, dest: Path) -> int:
         while child_file != EMPTY:
             entry = file_table + child_file
             _, sibling, data_off, data_size, _ = struct.unpack_from("<IIQQI", raw, entry)
-            name, _ = _name(raw, entry + 0x1C)
+            name = _name(raw, entry + 0x1C)
             start = file_data + data_off
             (path / name).write_bytes(raw[start : start + data_size])
             count += 1
@@ -175,7 +178,7 @@ def extract_romfs(raw: bytes, dest: Path) -> int:
         while child_dir != EMPTY:
             entry = dir_table + child_dir
             _, sibling = struct.unpack_from("<2I", raw, entry)
-            name, _ = _name(raw, entry + 0x14)
+            name = _name(raw, entry + 0x14)
             walk_dir(child_dir, path / name)
             child_dir = sibling
 
