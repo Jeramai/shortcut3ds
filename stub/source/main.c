@@ -104,9 +104,8 @@ static bool hbTitleMedia(FS_MediaType *media)
 }
 
 // YANBF's bootstrap.cia (DS mode) hands the path in path.txt to nds-bootstrap.
-static void startNds(void)
+static void startNds(FILE *f)
 {
-	FILE *f = fopen("romfs:/nds", "rb");
 	size_t n = fread(target, 1, sizeof(target) - 1, f);
 	fclose(f);
 	target[n] = '\0';
@@ -152,10 +151,10 @@ static void startNds(void)
 int main(void)
 {
 	romfsInit();
-	struct stat nds;
-	if (stat("romfs:/nds", &nds) == 0)
+	FILE *nds = fopen("romfs:/nds", "rb");
+	if (nds)
 	{
-		startNds();
+		startNds(nds);
 		romfsExit();
 		return 0;
 	}

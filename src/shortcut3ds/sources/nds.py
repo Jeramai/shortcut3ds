@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 from shortcut3ds import cia
-from shortcut3ds.common import placeholder_icon
+from shortcut3ds.common import header_title, placeholder_icon
 from shortcut3ds.sources.base import SHORTCUT, Defaults, Look, Request, Source
 
 HEADER_SIZE = 0x160
@@ -12,7 +12,6 @@ HEADER_CRC_OFFSET = 0x15E
 BANNER_POINTER = 0x68
 ICON_OFFSET, PALETTE_OFFSET, ENGLISH_TITLE_OFFSET = 0x20, 0x220, 0x340
 BANNER_SIZE = 0x840
-GAME_TITLE_SIZE = 12
 
 
 def crc16(data: bytes) -> int:
@@ -68,11 +67,6 @@ def banner_lines(banner: bytes) -> list[str]:
     return [line.strip() for line in text.split("\n") if line.strip()]
 
 
-def header_title(path: Path) -> str:
-    with path.open("rb") as f:
-        return f.read(GAME_TITLE_SIZE).split(b"\0", 1)[0].decode("ascii", "replace").strip().title()
-
-
 class Nds(Source):
     name = "nds"
     label = "Nintendo DS ROM, opens in nds-bootstrap"
@@ -90,7 +84,7 @@ class Nds(Source):
     def defaults(self, path: Path) -> Defaults:
         banner = read_banner(path)
         lines = banner_lines(banner) if banner else []
-        title = " ".join(lines[:-1] if len(lines) > 1 else lines) or header_title(path) or path.stem
+        title = " ".join(lines[:-1] if len(lines) > 1 else lines) or header_title(path, 0) or path.stem
         return Defaults(
             title=title,
             publisher=lines[-1] if len(lines) > 1 else "Nintendo DS",

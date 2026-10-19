@@ -159,6 +159,12 @@ def test_nds_path_must_be_one_absolute_line():
         cia.nds_path("/roms/nds/a\nb.nds")
     with pytest.raises(ValueError):
         cia.nds_path("roms/nds/a.nds")
+    with pytest.raises(ValueError):
+        cia.nds_path("/roms/nds/a\r.nds")
+
+
+def test_nds_path_is_composed_unicode():
+    assert cia.nds_path("/roms/nds/Poke\u0301mon.nds") == "sd:/roms/nds/Pok\u00e9mon.nds".encode()
 
 
 def test_gba_finds_mgba_and_skips_appledouble_files(tmp_path):

@@ -14,6 +14,7 @@ let picked = null;
 let pending = null;
 let source = null;
 let downloadUrl = null;
+let chosenMode = document.querySelector("input[name=mode]:checked").value;
 
 function mode() {
   return document.querySelector("input[name=mode]:checked").value;
@@ -118,7 +119,12 @@ fetch("sources.json", { cache: "no-store" })
 
 $("file").addEventListener("change", (e) => pick(e.target.files[0]));
 $("change").addEventListener("click", () => $("file").click());
-for (const radio of document.querySelectorAll("input[name=mode]")) radio.addEventListener("change", renderOptions);
+for (const radio of document.querySelectorAll("input[name=mode]")) {
+  radio.addEventListener("change", () => {
+    chosenMode = mode();
+    renderOptions();
+  });
+}
 
 const drop = $("drop");
 drop.addEventListener("dragover", (e) => {
@@ -186,7 +192,8 @@ worker.onmessage = ({ data }) => {
     source = found;
     document.querySelector("fieldset.modes").hidden = source.modes.length === 1;
     for (const radio of document.querySelectorAll("input[name=mode]")) radio.disabled = !source.modes.includes(radio.value);
-    if (!source.modes.includes(mode())) document.querySelector(`input[name=mode][value=${source.modes[0]}]`).checked = true;
+    const want = source.modes.includes(chosenMode) ? chosenMode : source.modes[0];
+    document.querySelector(`input[name=mode][value=${want}]`).checked = true;
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;
     $("publisher").value = data.value.publisher;

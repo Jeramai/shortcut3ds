@@ -160,7 +160,8 @@ def cmd_make(a: argparse.Namespace) -> int:
 def cmd_types(a: argparse.Namespace) -> int:
     for source in sources.SOURCES:
         extensions = ", ".join(source.extensions)
-        print(f"{source.name:6} {extensions:14} {source.label}")
+        only = f" ({source.modes[0]} only)" if len(source.modes) == 1 else ""
+        print(f"{source.name:6} {extensions:14} {source.label}{only}")
         for option in source.options:
             modes = ", ".join(f"{m}: {option.needs[m]}" for m in MODES if m in option.needs)
             print(f"{'':6} {flag(option.name):14} {option.label} ({modes})")

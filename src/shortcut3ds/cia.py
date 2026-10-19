@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -159,9 +160,10 @@ def target_blob(target: str, args: tuple[str, ...]) -> bytes:
 
 
 def nds_path(target: str) -> bytes:
-    if not target.startswith("/") or "\0" in target or "\n" in target:
+    if not target.startswith("/") or any(c in target for c in "\0\r\n"):
         raise ValueError("the target must be an absolute SD path such as /roms/nds/game.nds")
-    path = f"sd:{target}".encode()
+    # macOS hands out decomposed (NFD) names; the card stores composed ones.
+    path = unicodedata.normalize("NFC", f"sd:{target}").encode()
     if len(path) >= TARGET_BLOB_MAX:
         raise ValueError(f"the ROM path is longer than {TARGET_BLOB_MAX} bytes")
     return path
