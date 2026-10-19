@@ -131,6 +131,7 @@ class Shortcut:
     unique_id: int | None = None
     id_key: str | None = None
     embed: Path | None = None
+    nds: bool = False
     romfs_files: dict[str, Path | bytes] = field(default_factory=dict)
 
     def resolved_unique_id(self) -> int:
@@ -155,6 +156,15 @@ def target_blob(target: str, args: tuple[str, ...]) -> bytes:
     if len(blob) > TARGET_BLOB_MAX:
         raise ValueError(f"the target and its arguments are longer than {TARGET_BLOB_MAX} bytes")
     return blob
+
+
+def nds_path(target: str) -> bytes:
+    if not target.startswith("/") or "\0" in target or "\n" in target:
+        raise ValueError("the target must be an absolute SD path such as /roms/nds/game.nds")
+    path = f"sd:{target}".encode()
+    if len(path) >= TARGET_BLOB_MAX:
+        raise ValueError(f"the ROM path is longer than {TARGET_BLOB_MAX} bytes")
+    return path
 
 
 # The HOME Menu will not launch a title without a logo; it reports "SD card removed".
@@ -238,7 +248,10 @@ def prepare(shortcut: Shortcut, work: Path) -> list[list[str]]:
         _native_code(shortcut, work, romfs)
     else:
         shutil.copyfile(tools.stub_elf(), work / "app.elf")
-        (romfs / "target").write_bytes(target_blob(shortcut.target, shortcut.args))
+        if shortcut.nds:
+            (romfs / "nds").write_bytes(nds_path(shortcut.target))
+        else:
+            (romfs / "target").write_bytes(target_blob(shortcut.target, shortcut.args))
         if shortcut.deliver:
             if len(shortcut.deliver) > DELIVER_ARG_MAX:
                 raise ValueError(f"the deliver arg is longer than {DELIVER_ARG_MAX} bytes")

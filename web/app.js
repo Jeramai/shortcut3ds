@@ -112,7 +112,7 @@ fetch("sources.json", { cache: "no-store" })
     catalogue = list;
     const extensions = list.flatMap((s) => s.extensions);
     $("file").accept = extensions.join(",");
-    $("drop-kinds").textContent = extensions.join(" or ");
+    $("drop-kinds").textContent = new Intl.ListFormat("en", { type: "disjunction" }).format(extensions);
   })
   .catch(() => showError("The page could not load its file types. Reload to try again."));
 
@@ -184,6 +184,9 @@ worker.onmessage = ({ data }) => {
     }
     picked = pending;
     source = found;
+    document.querySelector("fieldset.modes").hidden = source.modes.length === 1;
+    for (const radio of document.querySelectorAll("input[name=mode]")) radio.disabled = !source.modes.includes(radio.value);
+    if (!source.modes.includes(mode())) document.querySelector(`input[name=mode][value=${source.modes[0]}]`).checked = true;
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;
     $("publisher").value = data.value.publisher;

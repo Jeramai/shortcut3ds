@@ -20,7 +20,7 @@ body:
     id: file
     attributes:
       label: File type and app
-      placeholder: ".3dsx of <app name and version>, or a GBA ROM with mGBA <build>"
+      placeholder: ".3dsx of <app name and version>, a GBA ROM with mGBA <build>, or a DS ROM"
     validations:
       required: true
   - type: input

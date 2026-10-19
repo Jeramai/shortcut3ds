@@ -175,12 +175,12 @@ def cmd_setup(a: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="shortcut3ds", description="Put 3DS homebrew and GBA games on the HOME Menu."
+        prog="shortcut3ds", description="Put 3DS homebrew, GBA and DS games on the HOME Menu."
     )
     p.add_argument("--version", action="version", version=__version__)
     sub = p.add_subparsers(dest="command", required=True)
 
-    m = sub.add_parser("make", help="make a CIA for a .3dsx app or a GBA ROM")
+    m = sub.add_parser("make", help="make a CIA for a .3dsx app, a GBA ROM or a DS ROM")
     m.add_argument("file", help="the file, ideally on the mounted SD card")
     m.add_argument(
         "--native", action="store_true", help="put the app inside the CIA (rebuild after app updates)"

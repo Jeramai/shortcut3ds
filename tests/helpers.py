@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 from shortcut3ds import smdh
-from shortcut3ds.sources import gba
+from shortcut3ds.sources import gba, nds
 
 ICON = Image.new("RGB", (48, 48))
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -62,3 +62,20 @@ def load_segments(elf: bytes) -> list[tuple[int, bytes, int, int]]:
         if kind == 1:
             out.append((vaddr, elf[off : off + filesz], memsz, flags))
     return out
+
+
+def make_nds(path: Path, banner_title: str | None = "Kart Game\nMaker", colour: int = 0x001F) -> Path:
+    rom = bytearray(0x200)
+    rom[:9] = b"KARTGAME\0"
+    if banner_title is not None:
+        banner = bytearray(nds.BANNER_SIZE)
+        banner[0] = 1
+        banner[nds.ICON_OFFSET : nds.ICON_OFFSET + 0x200] = b"\x11" * 0x200
+        struct.pack_into("<H", banner, nds.PALETTE_OFFSET + 2, colour)
+        title = banner_title.encode("utf-16-le")
+        banner[nds.ENGLISH_TITLE_OFFSET : nds.ENGLISH_TITLE_OFFSET + len(title)] = title
+        struct.pack_into("<I", rom, nds.BANNER_POINTER, len(rom))
+        rom += banner
+    struct.pack_into("<H", rom, nds.HEADER_CRC_OFFSET, nds.crc16(rom[: nds.HEADER_CRC_OFFSET]))
+    path.write_bytes(bytes(rom))
+    return path

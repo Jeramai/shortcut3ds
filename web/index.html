@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>shortcut3ds</title>
-  <meta name="description" content="Turn a 3DS homebrew app or a GBA ROM into a HOME Menu icon. Runs in your browser; your files never leave your device.">
+  <meta name="description" content="Turn a 3DS homebrew app, a GBA ROM or a DS ROM into a HOME Menu icon. Runs in your browser; your files never leave your device.">
   <meta property="og:title" content="shortcut3ds">
-  <meta property="og:description" content="Turn a 3DS homebrew app or a GBA ROM into a HOME Menu icon, right in your browser.">
+  <meta property="og:description" content="Turn a 3DS homebrew app, a GBA ROM or a DS ROM into a HOME Menu icon, right in your browser.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,8 +22,8 @@
 
   <main id="main">
     <section class="hero">
-      <h1>Your homebrew and GBA games,<br>right on the HOME Menu</h1>
-      <p class="lead">Drop a <code>.3dsx</code> app or a GBA ROM, get a <code>.cia</code> to install with FBI.
+      <h1>Your homebrew, GBA and DS games,<br>right on the HOME Menu</h1>
+      <p class="lead">Drop a <code>.3dsx</code> app, a GBA ROM or a DS ROM, get a <code>.cia</code> to install with FBI.
         It all runs in this tab; your files never leave your device.</p>
     </section>
 
@@ -31,8 +31,8 @@
       <h2 id="tool-title" class="sr">Converter</h2>
 
       <label class="drop" id="drop">
-        <input type="file" id="file" accept=".3dsx,.gba">
-        <span class="drop-title">Choose a <code id="drop-kinds">.3dsx or .gba</code> file</span>
+        <input type="file" id="file" accept=".3dsx,.gba,.nds">
+        <span class="drop-title">Choose a <code id="drop-kinds">.3dsx, .gba or .nds</code> file</span>
         <span class="drop-hint">or drop it here</span>
       </label>
 
@@ -101,7 +101,7 @@
     <section class="faq" aria-labelledby="faq-title">
       <h2 id="faq-title">Questions</h2>
       <details><summary>What do I need on the console?</summary>
-        <p>Custom firmware with Luma3DS, and FBI to install the file. Shortcut mode also needs the Homebrew Launcher Loader title <code>000400000D921E00</code>; install <a href="https://github.com/yellows8/hblauncher_loader/releases">hblauncher_loader.cia</a> once. For GBA games, native icons include mGBA; a GBA shortcut needs <a href="tools/mgba.3dsx" download>mgba.3dsx</a> in <code>/3ds/mgba/</code> on the card.</p></details>
+        <p>Custom firmware with Luma3DS, and FBI to install the file. Shortcut mode also needs the Homebrew Launcher Loader title <code>000400000D921E00</code>; install <a href="https://github.com/yellows8/hblauncher_loader/releases">hblauncher_loader.cia</a> once. For GBA games, native icons include mGBA; a GBA shortcut needs <a href="tools/mgba.3dsx" download>mgba.3dsx</a> in <code>/3ds/mgba/</code> on the card. DS games open only as shortcuts and need <a href="https://github.com/YANBForwarder/YANBF/releases">YANBF's bootstrap.cia</a>, installed once, and the <a href="https://github.com/RocketRobz/NTR_Forwarder/releases">DS Game Forwarder pack</a> on the card.</p></details>
       <details><summary>Native or shortcut?</summary>
         <p>Native opens straight into the app and returns to its own icon when you close it. A shortcut is tiny and always starts the newest version of the app on your card, but it passes through the Homebrew Launcher Loader.</p></details>
       <details><summary>Are my files uploaded?</summary>
