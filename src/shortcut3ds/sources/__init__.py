@@ -4,8 +4,9 @@ from shortcut3ds import cia
 from shortcut3ds.sources.base import FILE, LIST, SD_PATH, AppRef, Look, Option, Request, Source
 from shortcut3ds.sources.gba import Gba
 from shortcut3ds.sources.homebrew import Homebrew
+from shortcut3ds.sources.nds import Nds
 
-SOURCES: tuple[Source, ...] = (Homebrew(), Gba())
+SOURCES: tuple[Source, ...] = (Homebrew(), Gba(), Nds())
 
 
 class MissingOption(ValueError):
@@ -35,6 +36,8 @@ def describe() -> list[dict]:
 
 
 def build(source: Source, request: Request, look: Look) -> cia.Shortcut:
+    if request.mode not in source.modes:
+        raise ValueError(f"{source.label}: {request.mode} mode is not supported.")
     for option in source.options:
         need = option.need(request.mode)
         value = request.options.get(option.name)

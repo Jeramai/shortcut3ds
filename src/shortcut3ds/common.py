@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 from PIL import Image
 
@@ -27,6 +28,12 @@ def load_icon(path: str | None) -> Image.Image | None:
     flat = Image.new("RGB", img.size, (255, 255, 255))
     flat.paste(img, mask=img)
     return flat
+
+
+def header_title(path: Path, offset: int, size: int = 12) -> str:
+    with path.open("rb") as f:
+        f.seek(offset)
+        return f.read(size).split(b"\0", 1)[0].decode("ascii", "replace").strip().title()
 
 
 def placeholder_icon() -> Image.Image:

@@ -1,6 +1,6 @@
 # shortcut3ds
 
-Put 3DS homebrew apps (`.3dsx`) and GBA games on the HOME Menu as real icons.
+Put 3DS homebrew apps (`.3dsx`), GBA games and DS games on the HOME Menu as real icons.
 
 **Use it in your browser: [jeramai.github.io/shortcut3ds](https://jeramai.github.io/shortcut3ds/)**.
 Nothing is uploaded; the converter runs in the tab. There is also a command line tool for macOS
@@ -32,6 +32,10 @@ On the console:
   [mGBA](https://mgba.io) development build. A GBA shortcut starts mGBA from the card, so copy that
   build to `SD:/3ds/mgba/mgba.3dsx` (the website links it, and `--install` copies it). mGBA 0.10.x
   releases cannot open a ROM at startup.
+- **DS games:** shortcut mode only, and no Homebrew Launcher Loader. Install `bootstrap.cia` from
+  [YANBF](https://github.com/YANBForwarder/YANBF/releases) once with FBI, and copy the
+  `for SD card root` folder of the
+  [DS Game Forwarder pack](https://github.com/RocketRobz/NTR_Forwarder/releases) to the card.
 
 ## Command line
 
@@ -53,6 +57,7 @@ Mount the SD card and point at the file on it:
 ```sh
 shortcut3ds make /Volumes/3DS/3ds/myapp/myapp.3dsx --native --install
 shortcut3ds make "/Volumes/3DS/roms/gba/Pokemon Emerald.gba" --native --install
+shortcut3ds make "/Volumes/3DS/roms/nds/Mario Kart DS.nds" --install
 ```
 
 `make` detects the file type; `shortcut3ds types` lists the types and their extra options.
@@ -85,6 +90,11 @@ install it. Leave out `--native` to make a shortcut instead.
 file and the loader title exist, and passes the path and `argv` to Luma's `hb:ldr` service. Then it
 chainloads `000400000D921E00`. Luma builds that process from the `.3dsx` instead of the title's own
 code. GBA shortcuts also pass the ROM path to mGBA as the APT deliver arg.
+
+**DS.** A 3DS-mode app cannot start a `.nds` file. A DS shortcut's RomFS holds only the ROM path.
+The stub writes it to `SD:/_nds/ntr-forwarder/path.txt` and jumps to YANBF's DS-mode bootstrap
+title `0004800546574452`, which starts nds-bootstrap with that ROM. The icon, title and publisher
+come from the ROM's own banner.
 
 **Native.** `native.py` applies the `.3dsx` relocations for the application base address
 `0x00100000`, writes the three segments as an ELF for makerom, and unpacks the app's RomFS into the

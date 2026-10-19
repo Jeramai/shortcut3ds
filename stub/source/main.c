@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 
 #define HB_TITLE_ID 0x000400000D921E00ULL
+#define NDS_BOOTSTRAP_TITLE_ID 0x0004800546574452ULL
+#define NDS_PATH_FILE "sdmc:/_nds/ntr-forwarder/path.txt"
 #define ARGV_SIZE 0x400
 
 #define DELIVER_SIZE 0x300
@@ -101,9 +103,61 @@ static bool hbTitleMedia(FS_MediaType *media)
 	return found;
 }
 
+// YANBF's bootstrap.cia (DS mode) hands the path in path.txt to nds-bootstrap.
+static void startNds(FILE *f)
+{
+	size_t n = fread(target, 1, sizeof(target) - 1, f);
+	fclose(f);
+	target[n] = '\0';
+
+	char sdPath[ARGV_SIZE + 8];
+	snprintf(sdPath, sizeof(sdPath), "sdmc:%s", target + 3);
+	struct stat st;
+	if (strncmp(target, "sd:/", 4) != 0 || stat(sdPath, &st) != 0)
+	{
+		fail("Cannot find the game on the SD card:\n\n%s", sdPath);
+		return;
+	}
+
+	bool installed = false;
+	if (R_SUCCEEDED(amInit()))
+	{
+		u64 id = NDS_BOOTSTRAP_TITLE_ID;
+		AM_TitleEntry entry;
+		installed = R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_NAND, 1, &id, &entry));
+		amExit();
+	}
+	if (!installed)
+	{
+		fail("%s", "The YANBF bootstrap title is not installed.\n\n"
+			"Install bootstrap.cia from YANBF with FBI,\nthen open this icon again.");
+		return;
+	}
+
+	mkdir("sdmc:/_nds", 0777);
+	mkdir("sdmc:/_nds/ntr-forwarder", 0777);
+	f = fopen(NDS_PATH_FILE, "wb");
+	if (!f || fwrite(target, 1, n, f) != n)
+	{
+		if (f)
+			fclose(f);
+		fail("Cannot write %s.", NDS_PATH_FILE);
+		return;
+	}
+	fclose(f);
+	aptSetChainloader(NDS_BOOTSTRAP_TITLE_ID, MEDIATYPE_NAND);
+}
+
 int main(void)
 {
 	romfsInit();
+	FILE *nds = fopen("romfs:/nds", "rb");
+	if (nds)
+	{
+		startNds(nds);
+		romfsExit();
+		return 0;
+	}
 	bool ok = readTarget();
 	romfsExit();
 	if (!ok)

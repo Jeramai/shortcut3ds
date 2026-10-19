@@ -62,6 +62,7 @@ class Source(ABC):
     label: str
     extensions: tuple[str, ...]
     sd_folder: str
+    modes: tuple[str, ...] = MODES
     options: tuple[Option, ...] = ()
     notes: tuple[str, ...] = ()
 
@@ -83,6 +84,7 @@ class Source(ABC):
             "label": self.label,
             "extensions": list(self.extensions),
             "sd_folder": self.sd_folder,
+            "modes": list(self.modes),
             "notes": list(self.notes),
             "options": [asdict(o) for o in self.options],
         }

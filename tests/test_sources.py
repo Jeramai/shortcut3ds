@@ -2,16 +2,17 @@ import argparse
 import json
 
 import pytest
-from helpers import ICON, make_3dsx, make_gba, make_smdh
+from helpers import ICON, make_3dsx, make_gba, make_nds, make_smdh
 from PIL import Image
 
-from shortcut3ds import cli, sources, web
-from shortcut3ds.sources import gba
+from shortcut3ds import cia, cli, sources, web
+from shortcut3ds.sources import gba, nds
 from shortcut3ds.sources.base import FILE, LIST, MODES, NATIVE, SD_PATH, SHORTCUT, TEXT, AppRef, Look, Request
 
 SAMPLES = {
     "3dsx": lambda d: make_3dsx(d / "app.3dsx", make_smdh("My App", "Me", Image.new("RGB", (48, 48), "red"))),
     "gba": lambda d: make_gba(d / "Game (USA).gba"),
+    "nds": lambda d: make_nds(d / "Kart Game (Europe).nds"),
 }
 
 
@@ -32,10 +33,11 @@ def test_every_source_has_a_sample_file():
 @pytest.mark.parametrize("source", sources.SOURCES, ids=lambda s: s.name)
 def test_source_describes_itself_completely(source):
     assert source.name and source.label and source.extensions and source.sd_folder.startswith("/")
+    assert source.modes and set(source.modes) <= set(MODES)
     assert all(e.startswith(".") and e == e.lower() for e in source.extensions)
     for option in source.options:
         assert option.name.isidentifier()
-        assert set(option.needs) <= set(MODES)
+        assert set(option.needs) <= set(source.modes)
         assert set(option.needs.values()) <= {FILE, SD_PATH, TEXT, LIST}
     json.dumps(source.describe())
 
@@ -47,8 +49,11 @@ def test_source_detects_its_own_sample_and_no_other(source, tmp_path):
         assert source.matches(path) == (name == source.name)
 
 
-@pytest.mark.parametrize("source", sources.SOURCES, ids=lambda s: s.name)
-@pytest.mark.parametrize("mode", MODES)
+@pytest.mark.parametrize(
+    ("source", "mode"),
+    [(s, m) for s in sources.SOURCES for m in s.modes],
+    ids=lambda v: getattr(v, "name", v),
+)
 def test_source_builds_a_valid_shortcut_in_every_mode(source, mode, tmp_path):
     path = SAMPLES[source.name](tmp_path)
     defaults = source.defaults(path)
@@ -57,6 +62,17 @@ def test_source_builds_a_valid_shortcut_in_every_mode(source, mode, tmp_path):
     shortcut = sources.build(source, request, Look(defaults.title, defaults.publisher, defaults.icon))
     assert (shortcut.embed is not None) == (mode == NATIVE)
     assert shortcut.target.startswith("/")
+
+
+@pytest.mark.parametrize(
+    ("source", "mode"),
+    [(s, m) for s in sources.SOURCES for m in MODES if m not in s.modes],
+    ids=lambda v: getattr(v, "name", v),
+)
+def test_unsupported_mode_is_refused(source, mode, tmp_path):
+    path = SAMPLES[source.name](tmp_path)
+    with pytest.raises(ValueError, match=f"{mode} mode is not supported"):
+        sources.build(source, Request(path, "/x/" + path.name, mode, {}), Look("t", "", ICON))
 
 
 WITH_REQUIRED = [s for s in sources.SOURCES if any(o.need(NATIVE) in (FILE, SD_PATH) for o in s.options)]
@@ -71,7 +87,7 @@ def test_missing_required_option_is_reported(source, tmp_path):
 
 def test_detect_names_the_supported_types_when_nothing_matches(tmp_path):
     (tmp_path / "x.bin").write_bytes(bytes(0x200))
-    with pytest.raises(ValueError, match=r"\.3dsx.*\.gba"):
+    with pytest.raises(ValueError, match=r"\.3dsx.*\.gba.*\.nds"):
         sources.detect(tmp_path / "x.bin")
 
 
@@ -83,6 +99,7 @@ def test_detect_names_the_supported_types_when_nothing_matches(tmp_path):
         ("3dsx", "/3ds/emerald3ds/Emerald3DS.3dsx", NATIVE, "000400000F8FDB00"),
         ("gba", "/roms/gba/Pokemon Emerald.gba", SHORTCUT, "000400000F932E00"),
         ("gba", "/roms/gba/Pokemon Emerald.gba", NATIVE, "000400000F8ACC00"),
+        ("nds", "/roms/nds/Mario Kart DS.nds", SHORTCUT, "000400000FDDE800"),
     ],
 )
 def test_title_ids_stay_stable(name, target, mode, expected, tmp_path):
@@ -107,6 +124,47 @@ def test_gba_title_falls_back_to_the_header(tmp_path):
 def test_gba_initials_skip_filler_words():
     assert gba._initials("The Legend of Zelda") == "LZ"
     assert gba._initials("Pokemon - Emerald Version") == "PE"
+
+
+def test_nds_title_publisher_and_icon_come_from_the_banner(tmp_path):
+    defaults = nds.Nds().defaults(make_nds(tmp_path / "x.nds", "Kart\nGame\nMaker", colour=0x001F))
+    assert (defaults.title, defaults.publisher) == ("Kart Game", "Maker")
+    assert defaults.icon.size == (48, 48) and defaults.icon.getpixel((24, 24)) == (255, 0, 0)
+
+
+def test_nds_without_a_banner_uses_the_header_title(tmp_path):
+    defaults = nds.Nds().defaults(make_nds(tmp_path / "x.nds", banner_title=None))
+    assert (defaults.title, defaults.publisher) == ("Kartgame", "Nintendo DS")
+
+
+def test_nds_header_with_a_bad_crc_is_not_a_rom(tmp_path):
+    rom = make_nds(tmp_path / "x.nds")
+    raw = bytearray(rom.read_bytes())
+    raw[0] ^= 1
+    rom.write_bytes(bytes(raw))
+    assert not nds.is_nds_rom(rom)
+
+
+def test_nds_shortcut_holds_only_the_rom_path(tmp_path):
+    rom = make_nds(tmp_path / "x.nds")
+    request = Request(rom, "/roms/nds/x.nds", SHORTCUT, {})
+    shortcut = sources.build(nds.Nds(), request, Look("t", "", ICON))
+    cia.prepare(shortcut, tmp_path)
+    assert sorted(p.name for p in (tmp_path / "romfs").iterdir()) == ["nds"]
+    assert (tmp_path / "romfs" / "nds").read_bytes() == b"sd:/roms/nds/x.nds"
+
+
+def test_nds_path_must_be_one_absolute_line():
+    with pytest.raises(ValueError):
+        cia.nds_path("/roms/nds/a\nb.nds")
+    with pytest.raises(ValueError):
+        cia.nds_path("roms/nds/a.nds")
+    with pytest.raises(ValueError):
+        cia.nds_path("/roms/nds/a\r.nds")
+
+
+def test_nds_path_is_composed_unicode():
+    assert cia.nds_path("/roms/nds/Poke\u0301mon.nds") == "sd:/roms/nds/Pok\u00e9mon.nds".encode()
 
 
 def test_gba_finds_mgba_and_skips_appledouble_files(tmp_path):

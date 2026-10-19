@@ -4,6 +4,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from shortcut3ds import cia
+from shortcut3ds.common import header_title
 from shortcut3ds.sources.base import (
     FILE,
     NATIVE,
@@ -30,13 +31,7 @@ def is_gba_rom(path: Path) -> bool:
 
 def title_from_name(path: Path) -> str:
     name = re.sub(r"\s*[\(\[][^)\]]*[\)\]]", "", path.stem)
-    return re.sub(r"\s+", " ", name.replace("_", " ")).strip() or header_title(path)
-
-
-def header_title(path: Path) -> str:
-    with path.open("rb") as f:
-        f.seek(TITLE_OFFSET)
-        return f.read(12).split(b"\0", 1)[0].decode("ascii", "replace").strip().title()
+    return re.sub(r"\s+", " ", name.replace("_", " ")).strip() or header_title(path, TITLE_OFFSET)
 
 
 def _initials(title: str) -> str:

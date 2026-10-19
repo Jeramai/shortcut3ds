@@ -14,6 +14,7 @@ let picked = null;
 let pending = null;
 let source = null;
 let downloadUrl = null;
+let chosenMode = document.querySelector("input[name=mode]:checked").value;
 
 function mode() {
   return document.querySelector("input[name=mode]:checked").value;
@@ -112,13 +113,18 @@ fetch("sources.json", { cache: "no-store" })
     catalogue = list;
     const extensions = list.flatMap((s) => s.extensions);
     $("file").accept = extensions.join(",");
-    $("drop-kinds").textContent = extensions.join(" or ");
+    $("drop-kinds").textContent = new Intl.ListFormat("en", { type: "disjunction" }).format(extensions);
   })
   .catch(() => showError("The page could not load its file types. Reload to try again."));
 
 $("file").addEventListener("change", (e) => pick(e.target.files[0]));
 $("change").addEventListener("click", () => $("file").click());
-for (const radio of document.querySelectorAll("input[name=mode]")) radio.addEventListener("change", renderOptions);
+for (const radio of document.querySelectorAll("input[name=mode]")) {
+  radio.addEventListener("change", () => {
+    chosenMode = mode();
+    renderOptions();
+  });
+}
 
 const drop = $("drop");
 drop.addEventListener("dragover", (e) => {
@@ -184,6 +190,10 @@ worker.onmessage = ({ data }) => {
     }
     picked = pending;
     source = found;
+    document.querySelector("fieldset.modes").hidden = source.modes.length === 1;
+    for (const radio of document.querySelectorAll("input[name=mode]")) radio.disabled = !source.modes.includes(radio.value);
+    const want = source.modes.includes(chosenMode) ? chosenMode : source.modes[0];
+    document.querySelector(`input[name=mode][value=${want}]`).checked = true;
     const stem = picked.name.replace(/\.[^.]+$/, "");
     $("title").value = data.value.title;
     $("publisher").value = data.value.publisher;
